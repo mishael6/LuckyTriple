@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@payloqa/payment-widget": "^1.0.5"
+  }
+}
