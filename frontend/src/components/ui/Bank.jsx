@@ -156,7 +156,7 @@ export const BankView = ({ user, onUpdateUser }) => {
 
           {action === 'deposit' && (
             <div className="bank-info">
-              💳 TEST MODE: Payments auto-complete (no real money)
+              💳 Withdrawals are only approved from MONDAYS to FRIDAYS.
             </div>
           )}
 
