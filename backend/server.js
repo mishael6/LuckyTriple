@@ -477,6 +477,7 @@ app.get('/api/withdrawals/my-withdrawals', authenticateToken, async (req, res) =
 // ============================================================================
 
 // Play Game
+// Play Game
 app.post('/api/game/play', authenticateToken, async (req, res) => {
   try {
     const { bet, guesses } = req.body;
@@ -502,17 +503,101 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
-    const winningNumbers = [
-      Math.floor(Math.random() * 10),
-      Math.floor(Math.random() * 10),
-      Math.floor(Math.random() * 10)
-    ];
+    // ============================================================================
+    // NEW GAME LOGIC - WEIGHTED WIN RATES
+    // ============================================================================
+    
+    // Convert guesses to numbers
+    const playerGuesses = guesses.map(g => parseInt(g));
+    
+    // Decide outcome based on probability
+    const random = Math.random() * 100;
+    
+    let winningNumbers;
+    let targetMatches;
+    
+    if (random < 5) {
+      // 5% chance - Triple match (JACKPOT!)
+      targetMatches = 3;
+      winningNumbers = [...playerGuesses];
+      console.log('🎰 Jackpot outcome generated!');
+      
+    } else if (random < 30) {
+      // 25% chance - Double match
+      targetMatches = 2;
+      
+      // Pick 2 random positions to match
+      const positions = [0, 1, 2];
+      const shuffled = positions.sort(() => Math.random() - 0.5);
+      const matchPositions = shuffled.slice(0, 2);
+      
+      winningNumbers = [
+        Math.floor(Math.random() * 10),
+        Math.floor(Math.random() * 10),
+        Math.floor(Math.random() * 10)
+      ];
+      
+      // Set the matching positions
+      matchPositions.forEach(pos => {
+        winningNumbers[pos] = playerGuesses[pos];
+      });
+      
+      console.log('🌟 Double match outcome generated');
+      
+    } else if (random < 60) {
+      // 30% chance - Single match
+      targetMatches = 1;
+      
+      // Pick 1 random position to match
+      const matchPosition = Math.floor(Math.random() * 3);
+      
+      winningNumbers = [
+        Math.floor(Math.random() * 10),
+        Math.floor(Math.random() * 10),
+        Math.floor(Math.random() * 10)
+      ];
+      
+      // Set the matching position
+      winningNumbers[matchPosition] = playerGuesses[matchPosition];
+      
+      // Make sure other positions DON'T match
+      for (let i = 0; i < 3; i++) {
+        if (i !== matchPosition) {
+          while (winningNumbers[i] === playerGuesses[i]) {
+            winningNumbers[i] = Math.floor(Math.random() * 10);
+          }
+        }
+      }
+      
+      console.log('👍 Single match outcome generated');
+      
+    } else {
+      // 40% chance - No match
+      targetMatches = 0;
+      
+      winningNumbers = [
+        Math.floor(Math.random() * 10),
+        Math.floor(Math.random() * 10),
+        Math.floor(Math.random() * 10)
+      ];
+      
+      // Make sure NONE match
+      for (let i = 0; i < 3; i++) {
+        while (winningNumbers[i] === playerGuesses[i]) {
+          winningNumbers[i] = Math.floor(Math.random() * 10);
+        }
+      }
+      
+      console.log('😔 No match outcome generated');
+    }
 
+    // Calculate actual matches (verify our logic worked)
     let matches = 0;
-    guesses.forEach((guess, i) => {
-      if (parseInt(guess) === winningNumbers[i]) matches++;
+    playerGuesses.forEach((guess, i) => {
+      if (guess === winningNumbers[i]) matches++;
     });
 
+    // Calculate winnings
     let winAmount = 0;
     if (matches === 3) winAmount = bet * settings.payoutMultipliers.threeMatches;
     else if (matches === 2) winAmount = bet * settings.payoutMultipliers.twoMatches;
@@ -527,7 +612,7 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
     const gameHistory = new GameHistory({
       userId: user._id,
       betAmount: bet,
-      guesses,
+      guesses: playerGuesses,
       winningNumbers,
       matches,
       profit,
@@ -565,6 +650,8 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
         console.error('Win SMS failed:', smsError);
       }
     }
+
+    console.log(`🎲 Game result: ${matches} matches, Profit: GHS ${profit.toFixed(2)}`);
 
     res.json({
       success: true,
