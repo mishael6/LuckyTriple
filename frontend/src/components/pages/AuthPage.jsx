@@ -109,7 +109,7 @@ export const AuthPage = ({ onLogin }) => {
         </form>
 
         <div className="demo-hint">
-          💡 Use email with "admin" for admin access
+          Guess three numbers from 1 - 9, every guess wins!
         </div>
       </motion.div>
     </div>
