@@ -76,7 +76,7 @@ export const GameView = ({
               {result.profit > 0 ? (
                 <span className="win-amount">+GHS {result.profit.toFixed(2)}</span>
               ) : (
-                <span className="lose-amount">GHS {bet.toFixed(2)}</span>
+                <span className="lose-amount">-GHS {bet.toFixed(2)}</span>
               )}
             </div>
           </motion.div>
