@@ -156,7 +156,7 @@ export const BankView = ({ user, onUpdateUser }) => {
 
           {action === 'deposit' && (
             <div className="bank-info">
-              💳 Withdrawals are only approved from MONDAYS to FRIDAYS.
+              💳 24/7 withdrawal.
             </div>
           )}
 
