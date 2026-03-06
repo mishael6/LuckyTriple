@@ -68,7 +68,7 @@ export const GameView = ({
             <div className={`result-message ${result.profit > 0 ? 'win' : 'lose'}`}>
               {result.matches === 3 && '🎉 JACKPOT! All 3 Correct!'}
               {result.matches === 2 && '🌟 Great! 2 Correct!'}
-              {result.matches === 1 && '👍 Nice! 1 Correct!'}
+              {result.matches === 1 && '👍 Nice! 1 Correct, You get your BET back!'}
               {result.matches === 0 && '😔 No matches. Try again!'}
             </div>
 
