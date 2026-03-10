@@ -34,17 +34,17 @@ const payloqaAPI = {
   // ============================================================================
   // SMS FUNCTIONS
   // ============================================================================
-  
+
   sendSMS: async (phone, message) => {
     try {
       // Format phone number to E.164 format
       let formattedPhone = phone.replace(/\D/g, '');
-      
+
       // Add + prefix if not present
       if (!formattedPhone.startsWith('+')) {
         formattedPhone = '+' + formattedPhone;
       }
-      
+
       console.log('📱 Sending SMS to:', formattedPhone);
       console.log('📱 Message:', message);
 
@@ -66,7 +66,7 @@ const payloqaAPI = {
       );
 
       console.log('✅ SMS sent successfully:', response.data);
-      
+
       return {
         success: true,
         messageId: response.data.data?.message_id,
@@ -75,7 +75,7 @@ const payloqaAPI = {
       };
     } catch (error) {
       console.error('❌ SMS Error:', error.response?.data || error.message);
-      
+
       // Log specific errors
       if (error.response?.data?.error === 'INSUFFICIENT_BALANCE') {
         console.error('⚠️ Payloqa wallet has insufficient balance!');
@@ -84,7 +84,7 @@ const payloqaAPI = {
       } else if (error.response?.data?.error === 'SERVICE_ACCESS_DENIED') {
         console.error('⚠️ SMS permission not granted. Contact Payloqa support.');
       }
-      
+
       // Return success anyway so app doesn't crash
       return { success: false, error: error.response?.data?.error };
     }
@@ -94,15 +94,15 @@ const payloqaAPI = {
   sendBulkSMS: async (phones, message) => {
     try {
       console.log(`📱 Sending bulk SMS to ${phones.length} recipients`);
-      
+
       const results = [];
-      
+
       // Send SMS one by one
       for (const phone of phones) {
         try {
           const result = await payloqaAPI.sendSMS(phone, message);
           results.push({ phone, success: result.success });
-          
+
           // Small delay to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
@@ -110,10 +110,10 @@ const payloqaAPI = {
           results.push({ phone, success: false });
         }
       }
-      
+
       const successCount = results.filter(r => r.success).length;
       console.log(`✅ Bulk SMS complete: ${successCount}/${phones.length} sent`);
-      
+
       return {
         success: true,
         total: phones.length,
@@ -136,9 +136,10 @@ const payloqaAPI = {
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  phone: { type: String, required: true },
+  phone: { type: String, required: true, unique: true },
   balance: { type: Number, default: 0 },
   isAdmin: { type: Boolean, default: false },
+  isBlocked: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date }
 });
@@ -249,6 +250,11 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email already exists' });
     }
 
+    const existingPhone = await User.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({ success: false, error: 'Phone number already registered' });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
@@ -303,6 +309,10 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid credentials' });
     }
 
+    if (user.isBlocked) {
+      return res.status(403).json({ success: false, error: 'Your account has been blocked. Please contact support.' });
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(400).json({ success: false, error: 'Invalid credentials' });
@@ -352,14 +362,14 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 app.post('/api/payments/webhook', async (req, res) => {
   try {
     console.log('📨 Webhook received:', req.body);
-    
+
     const { status, amount, metadata } = req.body;
-    
+
     console.log('Payment status:', status, 'User ID:', metadata?.user_id);
 
     if (status === 'completed') {
       const user = await User.findById(metadata.user_id);
-      
+
       if (!user) {
         console.error('❌ User not found:', metadata.user_id);
         return res.status(404).json({ success: false, error: 'User not found' });
@@ -506,60 +516,60 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
     // ============================================================================
     // NEW GAME LOGIC - WEIGHTED WIN RATES
     // ============================================================================
-    
+
     // Convert guesses to numbers
     const playerGuesses = guesses.map(g => parseInt(g));
-    
+
     // Decide outcome based on probability
     const random = Math.random() * 100;
-    
+
     let winningNumbers;
     let targetMatches;
-    
+
     if (random < 5) {
       // 5% chance - Triple match (JACKPOT!)
       targetMatches = 3;
       winningNumbers = [...playerGuesses];
       console.log('🎰 Jackpot outcome generated!');
-      
+
     } else if (random < 30) {
       // 25% chance - Double match
       targetMatches = 2;
-      
+
       // Pick 2 random positions to match
       const positions = [0, 1, 2];
       const shuffled = positions.sort(() => Math.random() - 0.5);
       const matchPositions = shuffled.slice(0, 2);
-      
+
       winningNumbers = [
         Math.floor(Math.random() * 10),
         Math.floor(Math.random() * 10),
         Math.floor(Math.random() * 10)
       ];
-      
+
       // Set the matching positions
       matchPositions.forEach(pos => {
         winningNumbers[pos] = playerGuesses[pos];
       });
-      
+
       console.log('🌟 Double match outcome generated');
-      
+
     } else if (random < 60) {
       // 30% chance - Single match
       targetMatches = 1;
-      
+
       // Pick 1 random position to match
       const matchPosition = Math.floor(Math.random() * 3);
-      
+
       winningNumbers = [
         Math.floor(Math.random() * 10),
         Math.floor(Math.random() * 10),
         Math.floor(Math.random() * 10)
       ];
-      
+
       // Set the matching position
       winningNumbers[matchPosition] = playerGuesses[matchPosition];
-      
+
       // Make sure other positions DON'T match
       for (let i = 0; i < 3; i++) {
         if (i !== matchPosition) {
@@ -568,26 +578,26 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
           }
         }
       }
-      
+
       console.log('👍 Single match outcome generated');
-      
+
     } else {
       // 40% chance - No match
       targetMatches = 0;
-      
+
       winningNumbers = [
         Math.floor(Math.random() * 10),
         Math.floor(Math.random() * 10),
         Math.floor(Math.random() * 10)
       ];
-      
+
       // Make sure NONE match
       for (let i = 0; i < 3; i++) {
         while (winningNumbers[i] === playerGuesses[i]) {
           winningNumbers[i] = Math.floor(Math.random() * 10);
         }
       }
-      
+
       console.log('😔 No match outcome generated');
     }
 
@@ -1032,6 +1042,57 @@ app.get('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) =>
     });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to fetch stats' });
+  }
+});
+
+// Toggle Block User
+app.post('/api/admin/toggle-block-user', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (user.isAdmin) {
+      return res.status(403).json({ success: false, error: 'Cannot block administrative accounts' });
+    }
+
+    user.isBlocked = !user.isBlocked;
+    await user.save();
+
+    res.json({ success: true, message: `User ${user.isBlocked ? 'blocked' : 'unblocked'} successfully`, isBlocked: user.isBlocked });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to toggle user ban state' });
+  }
+});
+
+// Delete User
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (user.isAdmin) {
+      return res.status(403).json({ success: false, error: 'Cannot delete administrative accounts' });
+    }
+
+    // Clean up related data to prevent orphaned records.
+    await Transaction.deleteMany({ userId: user._id });
+    await GameHistory.deleteMany({ userId: user._id });
+
+    // Actually delete the user
+    await User.findByIdAndDelete(userId);
+
+    res.json({ success: true, message: 'User and associated data completely removed from system' });
+  } catch (error) {
+    console.error('Failed to delete user:', error);
+    res.status(500).json({ success: false, error: 'Failed to remove user' });
   }
 });
 

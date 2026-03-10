@@ -123,5 +123,15 @@ export const API = {
   getDashboardStats: async () => {
     const response = await axios.get('/admin/stats');
     return response.data;
+  },
+
+  toggleBlockUser: async (userId) => {
+    const response = await axios.post('/admin/toggle-block-user', { userId });
+    return response.data;
+  },
+
+  removeUser: async (userId) => {
+    const response = await axios.delete(`/admin/users/${userId}`);
+    return response.data;
   }
 };

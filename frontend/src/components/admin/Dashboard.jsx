@@ -56,7 +56,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
   const handleCreditUser = async (userId) => {
     const amount = parseFloat(prompt('Enter credit amount:'));
     const reason = prompt('Reason (optional):');
-    
+
     if (amount && amount > 0) {
       try {
         await API.creditUser(userId, amount, reason);
@@ -64,6 +64,30 @@ export const AdminDashboard = ({ user, onLogout }) => {
         loadData();
       } catch (error) {
         alert(error.response?.data?.error || 'Failed to credit user');
+      }
+    }
+  };
+
+  const handleToggleBlock = async (userId) => {
+    if (window.confirm('Are you sure you want to toggle the block status for this user?')) {
+      try {
+        const res = await API.toggleBlockUser(userId);
+        alert(res.message);
+        loadData();
+      } catch (error) {
+        alert(error.response?.data?.error || 'Failed to toggle block status');
+      }
+    }
+  };
+
+  const handleRemoveUser = async (userId) => {
+    if (window.confirm('⚠️ WARNING: This will permanently delete this user and all their game/transaction history. Are you absolutely sure?')) {
+      try {
+        const res = await API.removeUser(userId);
+        alert(res.message);
+        loadData();
+      } catch (error) {
+        alert(error.response?.data?.error || 'Failed to delete user');
       }
     }
   };
@@ -108,7 +132,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
 
     if (sendingToAll) {
       if (!window.confirm(`Send SMS to ALL ${users.length} users?`)) return;
-      
+
       try {
         await API.sendSMSToAll(smsMessage);
         alert('SMS sent to all users!');
@@ -136,8 +160,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
   };
 
   const toggleUserSelection = (userId) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
@@ -148,31 +172,31 @@ export const AdminDashboard = ({ user, onLogout }) => {
       <nav className="admin-nav">
         <h2>👑 Admin Dashboard</h2>
         <div className="admin-nav-buttons">
-          <button 
+          <button
             className={view === 'stats' ? 'active' : ''}
             onClick={() => setView('stats')}
           >
             📊 Stats
           </button>
-          <button 
+          <button
             className={view === 'users' ? 'active' : ''}
             onClick={() => setView('users')}
           >
             👥 Users
           </button>
-          <button 
+          <button
             className={view === 'withdrawals' ? 'active' : ''}
             onClick={() => setView('withdrawals')}
           >
             💸 Withdrawals
           </button>
-          <button 
+          <button
             className={view === 'sms' ? 'active' : ''}
             onClick={() => setView('sms')}
           >
             📱 SMS
           </button>
-          <button 
+          <button
             className={view === 'settings' ? 'active' : ''}
             onClick={() => setView('settings')}
           >
@@ -249,17 +273,34 @@ export const AdminDashboard = ({ user, onLogout }) => {
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u._id}>
-                      <td>{u.email}</td>
+                    <tr key={u._id} className={u.isBlocked ? 'blocked-user-row' : ''}>
+                      <td>
+                        {u.email}
+                        {u.isBlocked && <span title="Blocked User" style={{ marginLeft: '8px' }}>🚫</span>}
+                      </td>
                       <td>{u.phone}</td>
                       <td>GHS {u.balance.toFixed(2)}</td>
                       <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td>
-                        <button 
+                        <button
                           className="admin-btn-small"
                           onClick={() => handleCreditUser(u._id)}
                         >
                           💰 Credit
+                        </button>
+                        <button
+                          className="admin-btn-small"
+                          onClick={() => handleToggleBlock(u._id)}
+                          style={{ marginLeft: '5px', backgroundColor: u.isBlocked ? '#4CAF50' : '#f44336' }}
+                        >
+                          {u.isBlocked ? '✅ Unblock' : '🚫 Block'}
+                        </button>
+                        <button
+                          className="admin-btn-small"
+                          onClick={() => handleRemoveUser(u._id)}
+                          style={{ marginLeft: '5px', backgroundColor: '#d32f2f' }}
+                        >
+                          🗑️ Remove
                         </button>
                       </td>
                     </tr>
@@ -300,13 +341,13 @@ export const AdminDashboard = ({ user, onLogout }) => {
                       <td>
                         {w.status === 'pending' && (
                           <>
-                            <button 
+                            <button
                               className="admin-btn-approve"
                               onClick={() => handleApproveWithdrawal(w._id)}
                             >
                               ✓ Approve
                             </button>
-                            <button 
+                            <button
                               className="admin-btn-reject"
                               onClick={() => handleRejectWithdrawal(w._id)}
                             >
@@ -326,7 +367,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
         {view === 'sms' && (
           <div className="admin-section">
             <h3>📱 Send SMS Notifications</h3>
-            
+
             <div className="sms-send-section">
               <div className="sms-options">
                 <label>
@@ -408,7 +449,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
                 <input
                   type="number"
                   value={gameSettings.houseFee}
-                  onChange={(e) => setGameSettings({...gameSettings, houseFee: parseInt(e.target.value)})}
+                  onChange={(e) => setGameSettings({ ...gameSettings, houseFee: parseInt(e.target.value) })}
                 />
               </div>
               <div className="setting-item">
@@ -416,7 +457,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
                 <input
                   type="number"
                   value={gameSettings.maxBet}
-                  onChange={(e) => setGameSettings({...gameSettings, maxBet: parseInt(e.target.value)})}
+                  onChange={(e) => setGameSettings({ ...gameSettings, maxBet: parseInt(e.target.value) })}
                 />
               </div>
               <div className="setting-item">
@@ -424,7 +465,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
                 <input
                   type="number"
                   value={gameSettings.minBet}
-                  onChange={(e) => setGameSettings({...gameSettings, minBet: parseInt(e.target.value)})}
+                  onChange={(e) => setGameSettings({ ...gameSettings, minBet: parseInt(e.target.value) })}
                 />
               </div>
               <h4>Payout Multipliers</h4>
@@ -434,8 +475,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
                   type="number"
                   value={gameSettings.payoutMultipliers.threeMatches}
                   onChange={(e) => setGameSettings({
-                    ...gameSettings, 
-                    payoutMultipliers: {...gameSettings.payoutMultipliers, threeMatches: parseInt(e.target.value)}
+                    ...gameSettings,
+                    payoutMultipliers: { ...gameSettings.payoutMultipliers, threeMatches: parseInt(e.target.value) }
                   })}
                 />
               </div>
@@ -445,8 +486,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
                   type="number"
                   value={gameSettings.payoutMultipliers.twoMatches}
                   onChange={(e) => setGameSettings({
-                    ...gameSettings, 
-                    payoutMultipliers: {...gameSettings.payoutMultipliers, twoMatches: parseInt(e.target.value)}
+                    ...gameSettings,
+                    payoutMultipliers: { ...gameSettings.payoutMultipliers, twoMatches: parseInt(e.target.value) }
                   })}
                 />
               </div>
@@ -456,8 +497,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
                   type="number"
                   value={gameSettings.payoutMultipliers.oneMatch}
                   onChange={(e) => setGameSettings({
-                    ...gameSettings, 
-                    payoutMultipliers: {...gameSettings.payoutMultipliers, oneMatch: parseInt(e.target.value)}
+                    ...gameSettings,
+                    payoutMultipliers: { ...gameSettings.payoutMultipliers, oneMatch: parseInt(e.target.value) }
                   })}
                 />
               </div>
