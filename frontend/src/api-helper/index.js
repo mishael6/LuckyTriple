@@ -74,6 +74,17 @@ export const API = {
     return response.data;
   },
 
+  // Spin Game
+  playSpinGame: async (bet, direction, multiplier) => {
+    const response = await axios.post('/game/spin', { bet, direction, multiplier });
+    return response.data;
+  },
+
+  getSpinGameHistory: async () => {
+    const response = await axios.get('/game/spin-history');
+    return response.data;
+  },
+
   // Admin
   getAllUsers: async () => {
     const response = await axios.get('/admin/users');
@@ -97,6 +108,11 @@ export const API = {
 
   rejectWithdrawal: async (transactionId, reason) => {
     const response = await axios.post('/admin/reject-withdrawal', { transactionId, reason });
+    return response.data;
+  },
+
+  getAdminSpinHistory: async () => {
+    const response = await axios.get('/admin/spin-history');
     return response.data;
   },
 

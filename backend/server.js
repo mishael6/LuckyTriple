@@ -188,6 +188,22 @@ const smsLogSchema = new mongoose.Schema({
 
 const SMSLog = mongoose.model('SMSLog', smsLogSchema);
 
+// Spin Game History Model
+const spinGameHistorySchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  betAmount: { type: Number, required: true },
+  direction: { type: String, enum: ['up', 'bottom'], required: true },
+  multiplier: { type: Number, enum: [2, 3, 4], required: true },
+  outcome: { type: String, enum: ['up', 'bottom'], required: true },
+  won: { type: Boolean, required: true },
+  profit: { type: Number, required: true },
+  balanceBefore: { type: Number },
+  balanceAfter: { type: Number },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const SpinGameHistory = mongoose.model('SpinGameHistory', spinGameHistorySchema);
+
 // Game Settings Model
 const gameSettingsSchema = new mongoose.Schema({
   houseFee: { type: Number, default: 10 },
@@ -197,6 +213,11 @@ const gameSettingsSchema = new mongoose.Schema({
     threeMatches: { type: Number, default: 100 },
     twoMatches: { type: Number, default: 10 },
     oneMatch: { type: Number, default: 2 }
+  },
+  spinWinChances: {
+    x2: { type: Number, default: 45 },
+    x3: { type: Number, default: 30 },
+    x4: { type: Number, default: 20 }
   },
   updatedAt: { type: Date, default: Date.now },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
@@ -690,6 +711,117 @@ app.get('/api/game/history', authenticateToken, async (req, res) => {
   }
 });
 
+// Spin the Bottle Play
+app.post('/api/game/spin', authenticateToken, async (req, res) => {
+  try {
+    const { bet, direction, multiplier } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!bet || bet <= 0 || !['up', 'bottom'].includes(direction) || ![2, 3, 4].includes(multiplier)) {
+      return res.status(400).json({ success: false, error: 'Invalid game parameters' });
+    }
+
+    let settings = await GameSettings.findOne();
+    if (!settings) settings = await GameSettings.create({});
+
+    if (bet < settings.minBet || bet > settings.maxBet) {
+      return res.status(400).json({
+        success: false,
+        error: `Bet must be between GHS ${settings.minBet} and GHS ${settings.maxBet}`
+      });
+    }
+
+    if (user.balance < bet) {
+      return res.status(400).json({ success: false, error: 'Insufficient balance' });
+    }
+
+    // Determine chance of winning based on admin settings
+    const winChance = settings.spinWinChances[`x${multiplier}`];
+    const random = Math.random() * 100;
+    const won = random <= winChance;
+
+    const outcome = won ? direction : (direction === 'up' ? 'bottom' : 'up');
+
+    let profit = 0;
+    if (won) {
+      profit = (bet * multiplier) - bet;
+    } else {
+      profit = -bet;
+    }
+
+    const balanceBefore = user.balance;
+    user.balance += profit;
+    await user.save();
+
+    const spinHistory = new SpinGameHistory({
+      userId: user._id,
+      betAmount: bet,
+      direction,
+      multiplier,
+      outcome,
+      won,
+      profit,
+      balanceBefore,
+      balanceAfter: user.balance
+    });
+    await spinHistory.save();
+
+    await Transaction.create({
+      userId: user._id,
+      type: 'bet',
+      amount: bet,
+      status: 'completed',
+      reference: 'Spin the Bottle',
+      processedAt: new Date()
+    });
+
+    if (won) {
+      await Transaction.create({
+        userId: user._id,
+        type: 'win',
+        amount: bet * multiplier,
+        status: 'completed',
+        reference: 'Spin the Bottle Win',
+        processedAt: new Date()
+      });
+      // Try to send success SMS for big wins
+      if (multiplier >= 3) {
+        try {
+          await payloqaAPI.sendSMS(
+            user.phone,
+            `🍾 You won GHS ${(bet * multiplier).toFixed(2)} on Spin the Bottle (x${multiplier})! New balance: GHS ${user.balance.toFixed(2)}.`
+          );
+        } catch (e) { }
+      }
+    }
+
+    res.json({
+      success: true,
+      outcome,
+      won,
+      profit,
+      newBalance: user.balance,
+      message: won ? `You won! GHS ${profit.toFixed(2)} added.` : 'Better luck next time!'
+    });
+  } catch (error) {
+    console.error('Spin game error:', error);
+    res.status(500).json({ success: false, error: 'Spin game error occurred' });
+  }
+});
+
+// Get Spin Game History
+app.get('/api/game/spin-history', authenticateToken, async (req, res) => {
+  try {
+    const history = await SpinGameHistory.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch spin history' });
+  }
+});
+
 // Get Game Settings
 app.get('/api/game/settings', async (req, res) => {
   try {
@@ -1042,6 +1174,20 @@ app.get('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) =>
     });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to fetch stats' });
+  }
+});
+
+// Admin Get All Spin History
+app.get('/api/admin/spin-history', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const history = await SpinGameHistory.find()
+      .populate('userId', 'email phone')
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch admin spin history' });
   }
 });
 

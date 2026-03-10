@@ -12,6 +12,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
   const [gameSettings, setGameSettings] = useState(null);
   const [stats, setStats] = useState(null);
   const [smsLogs, setSmsLogs] = useState([]);
+  const [spinHistory, setSpinHistory] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // SMS State
@@ -45,6 +46,9 @@ export const AdminDashboard = ({ user, onLogout }) => {
         ]);
         if (usersRes.success) setUsers(usersRes.users);
         if (logsRes.success) setSmsLogs(logsRes.logs);
+      } else if (view === 'spin-history') {
+        const response = await API.getAdminSpinHistory();
+        if (response.success) setSpinHistory(response.history);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -195,6 +199,12 @@ export const AdminDashboard = ({ user, onLogout }) => {
             onClick={() => setView('sms')}
           >
             📱 SMS
+          </button>
+          <button
+            className={view === 'spin-history' ? 'active' : ''}
+            onClick={() => setView('spin-history')}
+          >
+            🍾 Spin History
           </button>
           <button
             className={view === 'settings' ? 'active' : ''}
@@ -440,6 +450,44 @@ export const AdminDashboard = ({ user, onLogout }) => {
           </div>
         )}
 
+        {view === 'spin-history' && (
+          <div className="admin-section">
+            <h3>Spin the Bottle History</h3>
+            <div className="withdrawals-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User Email</th>
+                    <th>Bet Amount</th>
+                    <th>Multiplier</th>
+                    <th>Prediction</th>
+                    <th>Outcome</th>
+                    <th>Date</th>
+                    <th>Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {spinHistory.map(h => (
+                    <tr key={h._id}>
+                      <td>{h.userId?.email || 'Unknown'}</td>
+                      <td>GHS {h.betAmount.toFixed(2)}</td>
+                      <td>x{h.multiplier}</td>
+                      <td>{h.direction.toUpperCase()}</td>
+                      <td>{h.outcome.toUpperCase()}</td>
+                      <td>{new Date(h.createdAt).toLocaleDateString()} {new Date(h.createdAt).toLocaleTimeString()}</td>
+                      <td>
+                        <span className={`status-badge ${h.won ? 'completed' : 'rejected'}`}>
+                          {h.won ? `+GHS ${h.profit.toFixed(2)}` : `-GHS ${Math.abs(h.profit).toFixed(2)}`}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {view === 'settings' && gameSettings && (
           <div className="admin-section">
             <h3>Game Settings</h3>
@@ -502,6 +550,42 @@ export const AdminDashboard = ({ user, onLogout }) => {
                   })}
                 />
               </div>
+
+              <h4>Spin the Bottle Win Chances</h4>
+              <div className="setting-item">
+                <label>x2 Multiplier Win %</label>
+                <input
+                  type="number"
+                  value={gameSettings.spinWinChances?.x2 || 45}
+                  onChange={(e) => setGameSettings({
+                    ...gameSettings,
+                    spinWinChances: { ...gameSettings.spinWinChances, x2: parseInt(e.target.value) }
+                  })}
+                />
+              </div>
+              <div className="setting-item">
+                <label>x3 Multiplier Win %</label>
+                <input
+                  type="number"
+                  value={gameSettings.spinWinChances?.x3 || 30}
+                  onChange={(e) => setGameSettings({
+                    ...gameSettings,
+                    spinWinChances: { ...gameSettings.spinWinChances, x3: parseInt(e.target.value) }
+                  })}
+                />
+              </div>
+              <div className="setting-item">
+                <label>x4 Multiplier Win %</label>
+                <input
+                  type="number"
+                  value={gameSettings.spinWinChances?.x4 || 20}
+                  onChange={(e) => setGameSettings({
+                    ...gameSettings,
+                    spinWinChances: { ...gameSettings.spinWinChances, x4: parseInt(e.target.value) }
+                  })}
+                />
+              </div>
+
               <button className="save-settings-btn" onClick={handleUpdateSettings}>
                 Save Settings
               </button>

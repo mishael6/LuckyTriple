@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { API } from '../../api-helper';
 import { GameView } from '../ui/Game';
+import { SpinView } from '../ui/SpinView';
 import { BankView } from '../ui/Bank';
 
 // ============================================================================
@@ -46,7 +47,7 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
       alert('Please enter all 3 numbers');
       return;
     }
-    
+
     if (user.balance < bet) {
       alert('Insufficient balance. Please deposit funds.');
       return;
@@ -54,14 +55,14 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
 
     setPlaying(true);
     setResult(null);
-    
+
     try {
       const gameResult = await API.playGame(bet, guesses);
-      
+
       if (gameResult.success) {
         setResult(gameResult);
         onUpdateUser({ ...user, balance: gameResult.newBalance });
-        
+
         if (gameResult.matches >= 2) {
           setShowCelebration(true);
           setTimeout(() => setShowCelebration(false), 3000);
@@ -90,13 +91,13 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
           <h2>🎰 Lucky Triple</h2>
         </div>
         <div className="nav-center">
-          <button 
-            className={view === 'game' ? 'active' : ''}
-            onClick={() => setView('game')}
+          <button
+            className={(view === 'game' || view === 'spin') ? 'active' : ''}
+            onClick={() => setView(view === 'spin' ? 'spin' : 'game')}
           >
-            🎮 Play
+            🎮 Games
           </button>
-          <button 
+          <button
             className={view === 'bank' ? 'active' : ''}
             onClick={() => setView('bank')}
           >
@@ -111,6 +112,38 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
           <button onClick={onLogout} className="logout-btn">Logout</button>
         </div>
       </nav>
+
+      {/* Sub-nav for games */}
+      {(view === 'game' || view === 'spin') && (
+        <div className="game-tabs" style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '15px' }}>
+          <button
+            onClick={() => setView('game')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: 'none',
+              background: view === 'game' ? '#FFC107' : '#333',
+              color: view === 'game' ? '#000' : '#fff',
+              cursor: 'pointer'
+            }}
+          >
+            🔢 Lucky Triple
+          </button>
+          <button
+            onClick={() => setView('spin')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: 'none',
+              background: view === 'spin' ? '#FFC107' : '#333',
+              color: view === 'spin' ? '#000' : '#fff',
+              cursor: 'pointer'
+            }}
+          >
+            🍾 Spin the Bottle
+          </button>
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {view === 'game' ? (
@@ -127,6 +160,13 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
             onPlay={handlePlay}
             onPlayAgain={handlePlayAgain}
             userBalance={user.balance || 0}
+          />
+        ) : view === 'spin' ? (
+          <SpinView
+            key="spin"
+            userBalance={user.balance || 0}
+            gameSettings={gameSettings}
+            onUpdateUser={onUpdateUser}
           />
         ) : (
           <BankView
