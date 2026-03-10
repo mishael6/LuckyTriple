@@ -287,16 +287,8 @@ export const BankView = ({ user, onUpdateUser }) => {
           </button>
 
           {action === 'deposit' && (
-            <div className="bank-info" style={{
-              padding: 'clamp(8px, 2.5vw, 10px)',
-              marginTop: '12px',
-              fontSize: 'clamp(12px, 3vw, 13px)',
-              color: 'rgba(255, 255, 255, 0.6)',
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              💳 24/7 withdrawals.
+            <div className="bank-info">
+              💳 24/7 withdrawal.
             </div>
           )}
 
