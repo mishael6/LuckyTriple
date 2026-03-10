@@ -296,7 +296,7 @@ export const BankView = ({ user, onUpdateUser }) => {
               borderRadius: '8px',
               textAlign: 'center'
             }}>
-              💳 Withdrawals are only made from MONDAYS to FRIDAYS.
+              💳 24/7 withdrawals.
             </div>
           )}
 
@@ -310,7 +310,7 @@ export const BankView = ({ user, onUpdateUser }) => {
               borderRadius: '8px',
               textAlign: 'center'
             }}>
-              ⏳ Withdrawals require admin approval.
+              ⏳ 24/7 withdrawal require admin approval.
             </div>
           )}
         </div>
@@ -319,11 +319,31 @@ export const BankView = ({ user, onUpdateUser }) => {
           config={paymentConfig}
           isOpen={isOpen}
           onClose={() => setIsOpen(false)}
-          onSuccess={(result) => {
+          onSuccess={async (result) => {
             console.log('Payment successful:', result);
             setIsOpen(false);
-            setMessage('✅ Payment successful!');
-            // Optionally refresh user balance here
+            
+            try {
+              // Record the deposit in the backend
+              const depositResult = await API.recordDeposit({
+                amount: Number(amount),
+                network: network,
+                paymentId: result.transactionId || result.id,
+                reference: result.reference
+              });
+              
+              if (depositResult.success) {
+                setMessage('✅ Payment successful! Balance updated.');
+                setAmount('');
+                // Update user balance in parent component
+                if (onUpdateUser && depositResult.user) {
+                  onUpdateUser(depositResult.user);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to record deposit:', error);
+              setMessage('⚠️ Payment received but failed to update balance. Please contact support.');
+            }
           }}
         />
       </div>

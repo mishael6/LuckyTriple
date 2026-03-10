@@ -21,7 +21,7 @@ export const GameView = ({
       exit={{ opacity: 0 }}
     >
       <div className="game-card">
-        <h3>Pick Your Lucky Numbers</h3>
+        <h3>Pick Your Lucky Numbers ok</h3>
         <p className="game-subtitle">Choose 3 numbers between 0-9</p>
 
         <div className="numbers-container">
@@ -68,7 +68,7 @@ export const GameView = ({
             <div className={`result-message ${result.profit > 0 ? 'win' : 'lose'}`}>
               {result.matches === 3 && '🎉 JACKPOT! All 3 Correct!'}
               {result.matches === 2 && '🌟 Great! 2 Correct!'}
-              {result.matches === 1 && '👍 Nice! 1 Correct!'}
+              {result.matches === 1 && '👍 Nice! 1 Correct, You get your bet BACK!'}
               {result.matches === 0 && '😔 No matches. Try again!'}
             </div>
 

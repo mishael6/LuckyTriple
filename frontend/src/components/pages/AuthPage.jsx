@@ -58,7 +58,7 @@ export const AuthPage = ({ onLogin }) => {
             Login
           </button>
           <button 
-            className={!isLogin ? 'active' : ''}
+            className={isLogin ? '' : 'active'}
             onClick={() => setIsLogin(false)}
           >
             Sign Up
