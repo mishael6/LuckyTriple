@@ -21,7 +21,7 @@ export const GameView = ({
       exit={{ opacity: 0 }}
     >
       <div className="game-card">
-        <h3>Pick Your Lucky Numbers ok</h3>
+        <h3>Pick Your Lucky Numbers hello</h3>
         <p className="game-subtitle">Choose 3 numbers between 0-9</p>
 
         <div className="numbers-container">
