@@ -76,17 +76,27 @@ const payloqaAPI = {
     } catch (error) {
       console.error('❌ SMS Error:', error.response?.data || error.message);
 
+      let errorMessage = 'Failed to send SMS';
+
       // Log specific errors
       if (error.response?.data?.error === 'INSUFFICIENT_BALANCE') {
-        console.error('⚠️ Payloqa wallet has insufficient balance!');
+        errorMessage = 'Payloqa wallet has insufficient balance!';
+        console.error('⚠️ ' + errorMessage);
       } else if (error.response?.data?.error === 'INVALID_PHONE_NUMBER') {
-        console.error('⚠️ Invalid phone number format:', phone);
+        errorMessage = `Invalid phone number format: ${phone}`;
+        console.error('⚠️ ' + errorMessage);
       } else if (error.response?.data?.error === 'SERVICE_ACCESS_DENIED') {
-        console.error('⚠️ SMS permission not granted. Contact Payloqa support.');
+        errorMessage = 'SMS permission not granted. Contact Payloqa support.';
+        console.error('⚠️ ' + errorMessage);
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (typeof error.response?.data === 'string') {
+        errorMessage = error.response.data;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
-      // Return success anyway so app doesn't crash
-      return { success: false, error: error.response?.data?.error };
+      throw new Error(errorMessage);
     }
   },
 
