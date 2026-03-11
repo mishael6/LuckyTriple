@@ -56,7 +56,7 @@ export const SpinView = ({
     const bottleRotation = spinning
         ? 1440 // Spin 4 times
         : spinResult
-            ? spinResult.outcome === 'up' ? 360 : 540 // Point up or down
+            ? spinResult.outcome === 'up' ? 0 : 180 // Point straight up (0 deg) or straight down (180 deg)
             : 0;
 
     return (
