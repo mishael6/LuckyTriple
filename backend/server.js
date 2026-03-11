@@ -880,10 +880,16 @@ app.post('/api/admin/credit-user', authenticateToken, requireAdmin, async (req, 
     });
 
     try {
-      await payloqaAPI.sendSMS(
-        user.phone,
-        `Your account has been credited with GHS ${amount.toFixed(2)}! ${reason ? `Reason: ${reason}` : ''} New balance: GHS ${user.balance.toFixed(2)} 🎁`
-      );
+      const message = `Your account has been credited with GHS ${amount.toFixed(2)}! ${reason ? `Reason: ${reason}` : ''} New balance: GHS ${user.balance.toFixed(2)} 🎁`;
+      const smsResponse = await payloqaAPI.sendSMS(user.phone, message);
+
+      await SMSLog.create({
+        phones: [user.phone],
+        message: message,
+        status: smsResponse.success ? 'sent' : 'failed',
+        sentBy: req.user.id,
+        response: smsResponse
+      });
     } catch (smsError) {
       console.error('Credit SMS failed:', smsError);
     }
@@ -941,10 +947,16 @@ app.post('/api/admin/approve-withdrawal', authenticateToken, requireAdmin, async
     await transaction.save();
 
     try {
-      await payloqaAPI.sendSMS(
-        user.phone,
-        `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been approved! The funds will be sent to your account within 24 hours. 💰`
-      );
+      const message = `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been approved! The funds will be sent to your account within 24 hours. 💰`;
+      const smsResponse = await payloqaAPI.sendSMS(user.phone, message);
+
+      await SMSLog.create({
+        phones: [user.phone],
+        message: message,
+        status: smsResponse.success ? 'sent' : 'failed',
+        sentBy: req.user.id,
+        response: smsResponse
+      });
     } catch (smsError) {
       console.error('Withdrawal approval SMS failed:', smsError);
     }
@@ -980,10 +992,16 @@ app.post('/api/admin/reject-withdrawal', authenticateToken, requireAdmin, async 
     await transaction.save();
 
     try {
-      await payloqaAPI.sendSMS(
-        transaction.userId.phone,
-        `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been rejected. ${reason ? `Reason: ${reason}` : 'Please contact support for more information.'}`
-      );
+      const message = `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been rejected. ${reason ? `Reason: ${reason}` : 'Please contact support for more information.'}`;
+      const smsResponse = await payloqaAPI.sendSMS(transaction.userId.phone, message);
+
+      await SMSLog.create({
+        phones: [transaction.userId.phone],
+        message: message,
+        status: smsResponse.success ? 'sent' : 'failed',
+        sentBy: req.user.id,
+        response: smsResponse
+      });
     } catch (smsError) {
       console.error('Withdrawal rejection SMS failed:', smsError);
     }
