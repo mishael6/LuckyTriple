@@ -40,9 +40,19 @@ body {
 }
 
 @keyframes float {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  33% { transform: translate(30px, -30px) rotate(5deg); }
-  66% { transform: translate(-20px, 20px) rotate(-5deg); }
+
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  33% {
+    transform: translate(30px, -30px) rotate(5deg);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) rotate(-5deg);
+  }
 }
 
 .auth-card {
@@ -70,8 +80,15 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 .logo-section h1 {
@@ -80,6 +97,7 @@ body {
   letter-spacing: 2px;
   background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
 }
@@ -224,13 +242,15 @@ body {
    NAVIGATION STYLES
    ============================================================================ */
 
-.game-container, .admin-container {
+.game-container,
+.admin-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.top-nav, .admin-nav {
+.top-nav,
+.admin-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -242,12 +262,14 @@ body {
   gap: 16px;
 }
 
-.nav-left h2, .admin-nav h2 {
+.nav-left h2,
+.admin-nav h2 {
   font-family: 'Bebas Neue', cursive;
   font-size: 32px;
   letter-spacing: 1px;
   background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -256,7 +278,8 @@ body {
   gap: 8px;
 }
 
-.nav-center button, .admin-nav-buttons button {
+.nav-center button,
+.admin-nav-buttons button {
   padding: 10px 24px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -268,7 +291,8 @@ body {
   transition: all 0.3s;
 }
 
-.nav-center button.active, .admin-nav-buttons button.active {
+.nav-center button.active,
+.admin-nav-buttons button.active {
   background: linear-gradient(135deg, #ffd700 0%, #f0a500 100%);
   color: #000;
   border-color: transparent;
@@ -324,7 +348,8 @@ body {
    GAME VIEW STYLES
    ============================================================================ */
 
-.game-view, .bank-view {
+.game-view,
+.bank-view {
   flex: 1;
   display: flex;
   align-items: center;
@@ -332,7 +357,8 @@ body {
   padding: 40px 20px;
 }
 
-.game-card, .bank-card {
+.game-card,
+.bank-card {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -344,13 +370,15 @@ body {
   box-sizing: border-box;
 }
 
-.game-card h3, .bank-card h3 {
+.game-card h3,
+.bank-card h3 {
   font-size: 32px;
   font-weight: 800;
   text-align: center;
   margin-bottom: 8px;
   background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -412,6 +440,7 @@ body {
 
 .number-input {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Result Display */
@@ -461,8 +490,15 @@ body {
 }
 
 @keyframes matchBounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
 }
 
 .result-message {
@@ -588,7 +624,8 @@ body {
 }
 
 /* Buttons */
-.play-btn, .play-again-btn {
+.play-btn,
+.play-again-btn {
   width: 100%;
   padding: 18px;
   background: linear-gradient(135deg, #ffd700 0%, #f0a500 100%);
@@ -604,12 +641,14 @@ body {
   letter-spacing: 1px;
 }
 
-.play-btn:hover:not(:disabled), .play-again-btn:hover {
+.play-btn:hover:not(:disabled),
+.play-again-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(255, 215, 0, 0.4);
 }
 
-.play-btn:active:not(:disabled), .play-again-btn:active {
+.play-btn:active:not(:disabled),
+.play-again-btn:active {
   transform: translateY(0);
 }
 
@@ -641,19 +680,32 @@ body {
   font-weight: 900;
   background: linear-gradient(90deg, #ffd700, #00ff88, #ffd700);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: rainbow 2s linear infinite, celebrationPulse 1s ease-in-out infinite;
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
 }
 
 @keyframes rainbow {
-  0% { filter: hue-rotate(0deg); }
-  100% { filter: hue-rotate(360deg); }
+  0% {
+    filter: hue-rotate(0deg);
+  }
+
+  100% {
+    filter: hue-rotate(360deg);
+  }
 }
 
 @keyframes celebrationPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 /* ============================================================================
@@ -825,7 +877,8 @@ body {
   color: #ffd700;
 }
 
-.users-table, .withdrawals-table {
+.users-table,
+.withdrawals-table {
   overflow-x: auto;
 }
 
@@ -878,7 +931,9 @@ td {
   color: #ff6b6b;
 }
 
-.admin-btn-small, .admin-btn-approve, .admin-btn-reject {
+.admin-btn-small,
+.admin-btn-approve,
+.admin-btn-reject {
   padding: 6px 16px;
   border: none;
   border-radius: 6px;
@@ -1214,31 +1269,171 @@ td {
 }
 
 /* ============================================================================
+   SPIN THE BOTTLE STYLES
+   ============================================================================ */
+
+.spin-game .game-card {
+  text-align: center;
+}
+
+.bottle-container {
+  height: 250px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 30px 0;
+  perspective: 1000px;
+  position: relative;
+}
+
+.bottle-container::after {
+  content: '';
+  position: absolute;
+  width: 150px;
+  height: 20px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.5) 0%, transparent 70%);
+  bottom: 20px;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.bottle {
+  font-size: 120px;
+  filter: drop-shadow(0px 15px 15px rgba(0, 0, 0, 0.4));
+  z-index: 1;
+  transform-origin: center center;
+}
+
+.spin-controls {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+}
+
+.control-group {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.control-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.win-chance-hint {
+  font-size: 12px;
+  color: rgba(255, 215, 0, 0.7);
+  text-transform: none;
+  font-weight: 400;
+  float: right;
+  margin-top: 2px;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+}
+
+.selection-btn {
+  flex: 1;
+  padding: 16px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.selection-btn .btn-icon {
+  font-size: 24px;
+}
+
+.selection-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.selection-btn.active.dir-up {
+  background: linear-gradient(135deg, #00C853 0%, #B2FF59 100%);
+  border-color: #00E676;
+  color: #000;
+  box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3);
+}
+
+.selection-btn.active.dir-bottom {
+  background: linear-gradient(135deg, #FF3D00 0%, #FF9E80 100%);
+  border-color: #FF6E40;
+  color: #000;
+  box-shadow: 0 4px 15px rgba(255, 61, 0, 0.3);
+}
+
+.selection-btn.active.mult-btn {
+  background: linear-gradient(135deg, #2979FF 0%, #82B1FF 100%);
+  border-color: #448AFF;
+  color: #000;
+  box-shadow: 0 4px 15px rgba(41, 121, 255, 0.3);
+}
+
+.potential-win {
+  text-align: center;
+  margin: 20px 0 0 0;
+  padding: 16px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px dashed rgba(255, 215, 0, 0.4);
+  border-radius: 12px;
+  color: #ffd700;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* ============================================================================
    RESPONSIVE BREAKPOINTS
    ============================================================================ */
 
 /* Tablets (768px and below) */
 @media (max-width: 768px) {
-  .top-nav, .admin-nav {
+
+  .top-nav,
+  .admin-nav {
     padding: 16px 20px;
   }
-  
-  .nav-left h2, .admin-nav h2 {
+
+  .nav-left h2,
+  .admin-nav h2 {
     font-size: 24px;
   }
 
   .nav-center {
     flex-wrap: wrap;
   }
-  
-  .game-card, .bank-card, .auth-card {
+
+  .game-card,
+  .bank-card,
+  .auth-card {
     padding: 32px 24px;
   }
-  
+
   .numbers-container {
     gap: 12px;
   }
-  
+
   .number-input {
     width: 80px;
     height: 80px;
@@ -1279,7 +1474,8 @@ td {
     padding: 8px 0;
   }
 
-  .play-btn, .play-again-btn {
+  .play-btn,
+  .play-again-btn {
     padding: 16px;
     font-size: 16px;
   }
@@ -1301,16 +1497,17 @@ td {
   .input-group select {
     padding: 12px 14px;
   }
-  
+
   .admin-content {
     padding: 20px;
   }
-  
+
   table {
     font-size: 14px;
   }
-  
-  th, td {
+
+  th,
+  td {
     padding: 12px 8px;
   }
 
@@ -1335,11 +1532,14 @@ td {
 
 /* Mobile phones (576px and below) */
 @media (max-width: 576px) {
-  .top-nav, .admin-nav {
+
+  .top-nav,
+  .admin-nav {
     padding: 12px 16px;
   }
 
-  .nav-left h2, .admin-nav h2 {
+  .nav-left h2,
+  .admin-nav h2 {
     font-size: 20px;
   }
 
@@ -1351,16 +1551,20 @@ td {
     font-size: 18px;
   }
 
-  .game-view, .bank-view {
+  .game-view,
+  .bank-view {
     padding: 20px 12px;
   }
-  
-  .game-card, .bank-card, .auth-card {
+
+  .game-card,
+  .bank-card,
+  .auth-card {
     padding: 24px 16px;
     border-radius: 20px;
   }
 
-  .game-card h3, .bank-card h3 {
+  .game-card h3,
+  .bank-card h3 {
     font-size: 24px;
   }
 
@@ -1368,11 +1572,11 @@ td {
     font-size: 14px;
     margin-bottom: 24px;
   }
-  
+
   .numbers-container {
     gap: 10px;
   }
-  
+
   .number-input {
     width: 70px;
     height: 70px;
@@ -1428,7 +1632,8 @@ td {
     font-size: 12px;
   }
 
-  .play-btn, .play-again-btn {
+  .play-btn,
+  .play-again-btn {
     padding: 14px;
     font-size: 16px;
   }
@@ -1490,7 +1695,8 @@ td {
     font-size: 12px;
   }
 
-  th, td {
+  th,
+  td {
     padding: 10px 6px;
   }
 
@@ -1509,11 +1715,15 @@ td {
 
 /* Extra small phones (400px and below) */
 @media (max-width: 400px) {
-  .game-card, .bank-card, .auth-card {
+
+  .game-card,
+  .bank-card,
+  .auth-card {
     padding: 20px 12px;
   }
 
-  .game-card h3, .bank-card h3 {
+  .game-card h3,
+  .bank-card h3 {
     font-size: 20px;
   }
 
@@ -1547,7 +1757,8 @@ td {
     min-width: 45px;
   }
 
-  .play-btn, .play-again-btn {
+  .play-btn,
+  .play-again-btn {
     padding: 12px;
     font-size: 15px;
   }
@@ -1563,7 +1774,9 @@ td {
 
 /* Landscape orientation */
 @media (max-width: 768px) and (orientation: landscape) {
-  .game-card, .bank-card {
+
+  .game-card,
+  .bank-card {
     padding: 20px;
   }
 
@@ -1606,4 +1819,3 @@ textarea {
 * {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
-

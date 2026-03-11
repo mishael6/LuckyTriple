@@ -71,25 +71,14 @@ export const SpinView = ({
                 <p className="game-subtitle">Predict where the bottle will point!</p>
 
                 {/* BOTTLE ANIMATION */}
-                <div className="bottle-container" style={{
-                    height: '250px',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    margin: '20px 0',
-                    perspective: '1000px'
-                }}>
-
+                <div className="bottle-container">
                     <motion.div
+                        className="bottle"
                         animate={{ rotate: bottleRotation }}
                         transition={{
                             duration: spinning ? 1.5 : 0.5,
                             ease: spinning ? "linear" : "easeOut",
                             repeat: spinning ? Infinity : 0
-                        }}
-                        style={{
-                            fontSize: '100px',
-                            filter: 'drop-shadow(0px 10px 10px rgba(0,0,0,0.3))'
                         }}
                     >
                         🍾
@@ -122,45 +111,45 @@ export const SpinView = ({
                         <label>1. Predict Direction</label>
                         <div className="button-group">
                             <button
-                                className={direction === 'up' ? 'active selection-btn' : 'selection-btn'}
+                                className={`selection-btn ${direction === 'up' ? 'active dir-up' : ''}`}
                                 onClick={() => setDirection('up')}
-                                style={{ backgroundColor: direction === 'up' ? '#4CAF50' : '#333' }}
                             >
-                                ⬆️ UP
+                                <span className="btn-icon">⬆️</span> UP
                             </button>
                             <button
-                                className={direction === 'bottom' ? 'active selection-btn' : 'selection-btn'}
+                                className={`selection-btn ${direction === 'bottom' ? 'active dir-bottom' : ''}`}
                                 onClick={() => setDirection('bottom')}
-                                style={{ backgroundColor: direction === 'bottom' ? '#4CAF50' : '#333' }}
                             >
-                                ⬇️ BOTTOM
+                                <span className="btn-icon">⬇️</span> BOTTOM
                             </button>
                         </div>
                     </div>
 
                     {/* MULTIPLIER PICKER */}
                     <div className="control-group">
-                        <label>2. Choose Multiplier {(gameSettings?.spinWinChances) &&
-                            <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                                (Win Chance: {gameSettings.spinWinChances[`x${multiplier}`]}%)
-                            </span>
-                        }</label>
+                        <label>
+                            2. Choose Multiplier
+                            {(gameSettings?.spinWinChances) &&
+                                <span className="win-chance-hint">
+                                    Win Chance: {gameSettings.spinWinChances[`x${multiplier}`]}%
+                                </span>
+                            }
+                        </label>
                         <div className="button-group">
                             {[2, 3, 4].map(mult => (
                                 <button
                                     key={mult}
-                                    className={multiplier === mult ? 'active selection-btn' : 'selection-btn'}
+                                    className={`selection-btn ${multiplier === mult ? 'active mult-btn' : ''}`}
                                     onClick={() => setMultiplier(mult)}
-                                    style={{ backgroundColor: multiplier === mult ? '#2196F3' : '#333' }}
                                 >
-                                    x{mult}
+                                    <span className="btn-icon">x{mult}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     {/* BET AMOUNT */}
-                    <div className="bet-section" style={{ marginTop: '20px' }}>
+                    <div className="bet-section">
                         <label>3. Bet Amount (GHS)</label>
                         <div className="bet-controls">
                             <button onClick={() => setBet(Math.max((gameSettings?.minBet || 1), bet - 10))}>-10</button>
@@ -175,7 +164,7 @@ export const SpinView = ({
                         </div>
                     </div>
 
-                    <div style={{ textAlign: 'center', marginTop: '10px', color: '#FFD700', fontWeight: 'bold' }}>
+                    <div className="potential-win">
                         Potential Win: GHS {(bet * multiplier).toFixed(2)}
                     </div>
 
@@ -184,7 +173,6 @@ export const SpinView = ({
                         className="play-btn"
                         onClick={handleSpin}
                         disabled={playing}
-                        style={{ width: '100%', marginTop: '20px', padding: '15px', fontSize: '1.2rem' }}
                     >
                         {spinning ? '🔄 Spinning...' : '🍾 SPIN NOW'}
                     </button>
