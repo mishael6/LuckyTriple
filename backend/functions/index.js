@@ -1,14 +1,10 @@
-// ============================================================================
-// SERVER.JS - Node.js Backend with MongoDB & Payloqa Integration
-// ============================================================================
-
+const functions = require('firebase-functions');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
-require('dotenv').config();
 
 const app = express();
 
@@ -31,25 +27,13 @@ const PAYLOQA_CONFIG = {
 };
 
 const payloqaAPI = {
-  // ============================================================================
-  // SMS FUNCTIONS
-  // ============================================================================
-
   sendSMS: async (phone, message) => {
     try {
-      // Format phone number to E.164 format
       let formattedPhone = phone.replace(/\D/g, '');
-
-      // Convert local Ghana 10-digit numbers (e.g. 055...) to international 233 format
-      if (formattedPhone.startsWith('0') && formattedPhone.length === 10) {
-        formattedPhone = '233' + formattedPhone.substring(1);
-      }
-
-      // Add + prefix if not present
       if (!formattedPhone.startsWith('+')) {
         formattedPhone = '+' + formattedPhone;
       }
-
+      
       console.log('📱 Sending SMS to:', formattedPhone);
       console.log('📱 Message:', message);
 
@@ -57,7 +41,7 @@ const payloqaAPI = {
         `${PAYLOQA_CONFIG.smsBaseURL}/sms/send`,
         {
           recipient_number: formattedPhone,
-          sender_id: 'LuckyTriple', // Change to 'Payloqa' if not registered
+          sender_id: 'LuckyTriple',
           message: message,
           usage_message_type: 'notification'
         },
@@ -71,7 +55,7 @@ const payloqaAPI = {
       );
 
       console.log('✅ SMS sent successfully:', response.data);
-
+      
       return {
         success: true,
         messageId: response.data.data?.message_id,
@@ -80,55 +64,39 @@ const payloqaAPI = {
       };
     } catch (error) {
       console.error('❌ SMS Error:', error.response?.data || error.message);
-
-      let errorMessage = 'Failed to send SMS';
-
-      // Log specific errors
+      
       if (error.response?.data?.error === 'INSUFFICIENT_BALANCE') {
-        errorMessage = 'Payloqa wallet has insufficient balance!';
-        console.error('⚠️ ' + errorMessage);
+        console.error('⚠️ Payloqa wallet has insufficient balance!');
       } else if (error.response?.data?.error === 'INVALID_PHONE_NUMBER') {
-        errorMessage = `Invalid phone number format: ${phone}`;
-        console.error('⚠️ ' + errorMessage);
+        console.error('⚠️ Invalid phone number format:', phone);
       } else if (error.response?.data?.error === 'SERVICE_ACCESS_DENIED') {
-        errorMessage = 'SMS permission not granted. Contact Payloqa support.';
-        console.error('⚠️ ' + errorMessage);
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (typeof error.response?.data === 'string') {
-        errorMessage = error.response.data;
-      } else if (error.message) {
-        errorMessage = error.message;
+        console.error('⚠️ SMS permission not granted. Contact Payloqa support.');
       }
-
-      throw new Error(errorMessage);
+      
+      return { success: false, error: error.response?.data?.error };
     }
   },
 
-  // Send SMS to multiple recipients
   sendBulkSMS: async (phones, message) => {
     try {
       console.log(`📱 Sending bulk SMS to ${phones.length} recipients`);
-
+      
       const results = [];
-
-      // Send SMS one by one
+      
       for (const phone of phones) {
         try {
           const result = await payloqaAPI.sendSMS(phone, message);
           results.push({ phone, success: result.success });
-
-          // Small delay to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.error(`Failed to send SMS to ${phone}:`, error);
           results.push({ phone, success: false });
         }
       }
-
+      
       const successCount = results.filter(r => r.success).length;
-      console.log(`✅ Bulk SMS complete: ${successCount}/${phones.length} sent`);
-
+      console.log(`✅ Bulk SMS complete: ${successCount}/${phones.length} sent successfully`);
+      
       return {
         success: true,
         total: phones.length,
@@ -147,21 +115,18 @@ const payloqaAPI = {
 // DATABASE MODELS
 // ============================================================================
 
-// User Model
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  phone: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
   balance: { type: Number, default: 0 },
   isAdmin: { type: Boolean, default: false },
-  isBlocked: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date }
 });
 
 const User = mongoose.model('User', userSchema);
 
-// Transaction Model
 const transactionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   type: { type: String, enum: ['deposit', 'withdrawal', 'bet', 'win', 'credit'], required: true },
@@ -176,7 +141,6 @@ const transactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
 
-// Game History Model
 const gameHistorySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   betAmount: { type: Number, required: true },
@@ -191,7 +155,6 @@ const gameHistorySchema = new mongoose.Schema({
 
 const GameHistory = mongoose.model('GameHistory', gameHistorySchema);
 
-// SMS Log Model
 const smsLogSchema = new mongoose.Schema({
   phones: { type: [String], required: true },
   message: { type: String, required: true },
@@ -203,23 +166,6 @@ const smsLogSchema = new mongoose.Schema({
 
 const SMSLog = mongoose.model('SMSLog', smsLogSchema);
 
-// Spin Game History Model
-const spinGameHistorySchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  betAmount: { type: Number, required: true },
-  direction: { type: String, enum: ['up', 'bottom'], required: true },
-  multiplier: { type: Number, enum: [2, 3, 4], required: true },
-  outcome: { type: String, enum: ['up', 'bottom'], required: true },
-  won: { type: Boolean, required: true },
-  profit: { type: Number, required: true },
-  balanceBefore: { type: Number },
-  balanceAfter: { type: Number },
-  createdAt: { type: Date, default: Date.now }
-});
-
-const SpinGameHistory = mongoose.model('SpinGameHistory', spinGameHistorySchema);
-
-// Game Settings Model
 const gameSettingsSchema = new mongoose.Schema({
   houseFee: { type: Number, default: 10 },
   maxBet: { type: Number, default: 1000 },
@@ -229,16 +175,38 @@ const gameSettingsSchema = new mongoose.Schema({
     twoMatches: { type: Number, default: 10 },
     oneMatch: { type: Number, default: 2 }
   },
-  spinWinChances: {
-    x2: { type: Number, default: 45 },
-    x3: { type: Number, default: 30 },
-    x4: { type: Number, default: 20 }
-  },
   updatedAt: { type: Date, default: Date.now },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
 const GameSettings = mongoose.model('GameSettings', gameSettingsSchema);
+
+// ============================================================================
+// MONGODB CONNECTION
+// ============================================================================
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://waste_express:WaStEeXpReSs@cluster1.egrqlyu.mongodb.net/lucky_triple?retryWrites=true&w=majority&appName=Cluster1';
+const JWT_SECRET = process.env.JWT_SECRET || 'myGameSecret123XYZ999';
+
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedDb && mongoose.connection.readyState === 1) {
+    console.log('Using cached database connection');
+    return cachedDb;
+  }
+
+  try {
+    console.log('Creating new database connection');
+    const connection = await mongoose.connect(MONGODB_URI);
+    cachedDb = connection;
+    console.log('✅ Connected to MongoDB');
+    return cachedDb;
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error);
+    throw error;
+  }
+}
 
 // ============================================================================
 // MIDDLEWARE - AUTH
@@ -252,7 +220,7 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ success: false, error: 'Access token required' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ success: false, error: 'Invalid or expired token' });
     }
@@ -272,8 +240,9 @@ const requireAdmin = (req, res, next) => {
 // ROUTES - AUTHENTICATION
 // ============================================================================
 
-// Sign Up
 app.post('/api/auth/signup', async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { email, password, phone } = req.body;
 
@@ -284,11 +253,6 @@ app.post('/api/auth/signup', async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, error: 'Email already exists' });
-    }
-
-    const existingPhone = await User.findOne({ phone });
-    if (existingPhone) {
-      return res.status(400).json({ success: false, error: 'Phone number already registered' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -302,7 +266,6 @@ app.post('/api/auth/signup', async (req, res) => {
 
     await user.save();
 
-    // Send welcome SMS
     try {
       await payloqaAPI.sendSMS(
         phone,
@@ -314,7 +277,7 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, isAdmin: user.isAdmin },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -335,18 +298,15 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// Login
 app.post('/api/auth/login', async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ success: false, error: 'Invalid credentials' });
-    }
-
-    if (user.isBlocked) {
-      return res.status(403).json({ success: false, error: 'Your account has been blocked. Please contact support.' });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -359,7 +319,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, isAdmin: user.isAdmin },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -380,8 +340,9 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Get Current User
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const user = await User.findById(req.user.id).select('-password');
     res.json({ success: true, user });
@@ -394,18 +355,19 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 // ROUTES - PAYMENTS & DEPOSITS
 // ============================================================================
 
-// Payment Callback (Webhook from Payloqa)
 app.post('/api/payments/webhook', async (req, res) => {
+  await connectToDatabase();
+  
   try {
     console.log('📨 Webhook received:', req.body);
-
+    
     const { status, amount, metadata } = req.body;
-
+    
     console.log('Payment status:', status, 'User ID:', metadata?.user_id);
 
     if (status === 'completed') {
       const user = await User.findById(metadata.user_id);
-
+      
       if (!user) {
         console.error('❌ User not found:', metadata.user_id);
         return res.status(404).json({ success: false, error: 'User not found' });
@@ -417,7 +379,6 @@ app.post('/api/payments/webhook', async (req, res) => {
 
       console.log(`✅ Balance updated for ${user.email}: GHS ${user.balance}`);
 
-      // Send deposit confirmation SMS
       try {
         await payloqaAPI.sendSMS(
           user.phone,
@@ -445,8 +406,9 @@ app.post('/api/payments/webhook', async (req, res) => {
 // ROUTES - WITHDRAWALS
 // ============================================================================
 
-// Request Withdrawal
 app.post('/api/withdrawals/request', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { amount } = req.body;
     const user = await User.findById(req.user.id);
@@ -468,7 +430,6 @@ app.post('/api/withdrawals/request', authenticateToken, async (req, res) => {
     });
     await transaction.save();
 
-    // ✅ Send SMS to user
     try {
       await payloqaAPI.sendSMS(
         user.phone,
@@ -479,7 +440,6 @@ app.post('/api/withdrawals/request', authenticateToken, async (req, res) => {
       console.error('❌ User SMS failed:', smsError);
     }
 
-    // ✅ Notify all admins
     try {
       const admins = await User.find({ isAdmin: true });
       for (const admin of admins) {
@@ -504,8 +464,9 @@ app.post('/api/withdrawals/request', authenticateToken, async (req, res) => {
   }
 });
 
-// Get User Withdrawals
 app.get('/api/withdrawals/my-withdrawals', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const withdrawals = await Transaction.find({
       userId: req.user.id,
@@ -522,9 +483,9 @@ app.get('/api/withdrawals/my-withdrawals', authenticateToken, async (req, res) =
 // ROUTES - GAME
 // ============================================================================
 
-// Play Game
-// Play Game
 app.post('/api/game/play', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { bet, guesses } = req.body;
     const user = await User.findById(req.user.id);
@@ -549,101 +510,17 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
-    // ============================================================================
-    // NEW GAME LOGIC - WEIGHTED WIN RATES
-    // ============================================================================
+    const winningNumbers = [
+      Math.floor(Math.random() * 10),
+      Math.floor(Math.random() * 10),
+      Math.floor(Math.random() * 10)
+    ];
 
-    // Convert guesses to numbers
-    const playerGuesses = guesses.map(g => parseInt(g));
-
-    // Decide outcome based on probability
-    const random = Math.random() * 100;
-
-    let winningNumbers;
-    let targetMatches;
-
-    if (random < 5) {
-      // 5% chance - Triple match (JACKPOT!)
-      targetMatches = 3;
-      winningNumbers = [...playerGuesses];
-      console.log('🎰 Jackpot outcome generated!');
-
-    } else if (random < 30) {
-      // 25% chance - Double match
-      targetMatches = 2;
-
-      // Pick 2 random positions to match
-      const positions = [0, 1, 2];
-      const shuffled = positions.sort(() => Math.random() - 0.5);
-      const matchPositions = shuffled.slice(0, 2);
-
-      winningNumbers = [
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10)
-      ];
-
-      // Set the matching positions
-      matchPositions.forEach(pos => {
-        winningNumbers[pos] = playerGuesses[pos];
-      });
-
-      console.log('🌟 Double match outcome generated');
-
-    } else if (random < 60) {
-      // 30% chance - Single match
-      targetMatches = 1;
-
-      // Pick 1 random position to match
-      const matchPosition = Math.floor(Math.random() * 3);
-
-      winningNumbers = [
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10)
-      ];
-
-      // Set the matching position
-      winningNumbers[matchPosition] = playerGuesses[matchPosition];
-
-      // Make sure other positions DON'T match
-      for (let i = 0; i < 3; i++) {
-        if (i !== matchPosition) {
-          while (winningNumbers[i] === playerGuesses[i]) {
-            winningNumbers[i] = Math.floor(Math.random() * 10);
-          }
-        }
-      }
-
-      console.log('👍 Single match outcome generated');
-
-    } else {
-      // 40% chance - No match
-      targetMatches = 0;
-
-      winningNumbers = [
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10)
-      ];
-
-      // Make sure NONE match
-      for (let i = 0; i < 3; i++) {
-        while (winningNumbers[i] === playerGuesses[i]) {
-          winningNumbers[i] = Math.floor(Math.random() * 10);
-        }
-      }
-
-      console.log('😔 No match outcome generated');
-    }
-
-    // Calculate actual matches (verify our logic worked)
     let matches = 0;
-    playerGuesses.forEach((guess, i) => {
-      if (guess === winningNumbers[i]) matches++;
+    guesses.forEach((guess, i) => {
+      if (parseInt(guess) === winningNumbers[i]) matches++;
     });
 
-    // Calculate winnings
     let winAmount = 0;
     if (matches === 3) winAmount = bet * settings.payoutMultipliers.threeMatches;
     else if (matches === 2) winAmount = bet * settings.payoutMultipliers.twoMatches;
@@ -658,7 +535,7 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
     const gameHistory = new GameHistory({
       userId: user._id,
       betAmount: bet,
-      guesses: playerGuesses,
+      guesses,
       winningNumbers,
       matches,
       profit,
@@ -685,7 +562,6 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
       });
     }
 
-    // Send SMS for big wins
     if (matches >= 2) {
       try {
         await payloqaAPI.sendSMS(
@@ -696,8 +572,6 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
         console.error('Win SMS failed:', smsError);
       }
     }
-
-    console.log(`🎲 Game result: ${matches} matches, Profit: GHS ${profit.toFixed(2)}`);
 
     res.json({
       success: true,
@@ -713,8 +587,9 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
   }
 });
 
-// Get Game History
 app.get('/api/game/history', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const history = await GameHistory.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
@@ -726,119 +601,9 @@ app.get('/api/game/history', authenticateToken, async (req, res) => {
   }
 });
 
-// Spin the Bottle Play
-app.post('/api/game/spin', authenticateToken, async (req, res) => {
-  try {
-    const { bet, direction, multiplier } = req.body;
-    const user = await User.findById(req.user.id);
-
-    if (!bet || bet <= 0 || !['up', 'bottom'].includes(direction) || ![2, 3, 4].includes(multiplier)) {
-      return res.status(400).json({ success: false, error: 'Invalid game parameters' });
-    }
-
-    let settings = await GameSettings.findOne();
-    if (!settings) settings = await GameSettings.create({});
-
-    if (bet < settings.minBet || bet > settings.maxBet) {
-      return res.status(400).json({
-        success: false,
-        error: `Bet must be between GHS ${settings.minBet} and GHS ${settings.maxBet}`
-      });
-    }
-
-    if (user.balance < bet) {
-      return res.status(400).json({ success: false, error: 'Insufficient balance' });
-    }
-
-    // Determine chance of winning based on admin settings
-    const winChance = settings.spinWinChances[`x${multiplier}`];
-    const random = Math.random() * 100;
-    const won = random <= winChance;
-
-    const outcome = won ? direction : (direction === 'up' ? 'bottom' : 'up');
-
-    let profit = 0;
-    if (won) {
-      profit = (bet * multiplier) - bet;
-    } else {
-      profit = -bet;
-    }
-
-    const balanceBefore = user.balance;
-    user.balance += profit;
-    await user.save();
-
-    const spinHistory = new SpinGameHistory({
-      userId: user._id,
-      betAmount: bet,
-      direction,
-      multiplier,
-      outcome,
-      won,
-      profit,
-      balanceBefore,
-      balanceAfter: user.balance
-    });
-    await spinHistory.save();
-
-    await Transaction.create({
-      userId: user._id,
-      type: 'bet',
-      amount: bet,
-      status: 'completed',
-      reference: 'Spin the Bottle',
-      processedAt: new Date()
-    });
-
-    if (won) {
-      await Transaction.create({
-        userId: user._id,
-        type: 'win',
-        amount: bet * multiplier,
-        status: 'completed',
-        reference: 'Spin the Bottle Win',
-        processedAt: new Date()
-      });
-      // Try to send success SMS for big wins
-      if (multiplier >= 3) {
-        try {
-          await payloqaAPI.sendSMS(
-            user.phone,
-            `🍾 You won GHS ${(bet * multiplier).toFixed(2)} on Spin the Bottle (x${multiplier})! New balance: GHS ${user.balance.toFixed(2)}.`
-          );
-        } catch (e) { }
-      }
-    }
-
-    res.json({
-      success: true,
-      outcome,
-      won,
-      profit,
-      newBalance: user.balance,
-      message: won ? `You won! GHS ${profit.toFixed(2)} added.` : 'Better luck next time!'
-    });
-  } catch (error) {
-    console.error('Spin game error:', error);
-    res.status(500).json({ success: false, error: 'Spin game error occurred' });
-  }
-});
-
-// Get Spin Game History
-app.get('/api/game/spin-history', authenticateToken, async (req, res) => {
-  try {
-    const history = await SpinGameHistory.find({ userId: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(50);
-
-    res.json({ success: true, history });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to fetch spin history' });
-  }
-});
-
-// Get Game Settings
 app.get('/api/game/settings', async (req, res) => {
+  await connectToDatabase();
+  
   try {
     let settings = await GameSettings.findOne();
     if (!settings) {
@@ -854,8 +619,9 @@ app.get('/api/game/settings', async (req, res) => {
 // ROUTES - ADMIN
 // ============================================================================
 
-// Get All Users
 app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const users = await User.find({ isAdmin: false })
       .select('-password')
@@ -867,8 +633,9 @@ app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
-// Credit User
 app.post('/api/admin/credit-user', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { userId, amount, reason } = req.body;
 
@@ -895,16 +662,10 @@ app.post('/api/admin/credit-user', authenticateToken, requireAdmin, async (req, 
     });
 
     try {
-      const message = `Your account has been credited with GHS ${amount.toFixed(2)}! ${reason ? `Reason: ${reason}` : ''} New balance: GHS ${user.balance.toFixed(2)} 🎁`;
-      const smsResponse = await payloqaAPI.sendSMS(user.phone, message);
-
-      await SMSLog.create({
-        phones: [user.phone],
-        message: message,
-        status: smsResponse.success ? 'sent' : 'failed',
-        sentBy: req.user.id,
-        response: smsResponse
-      });
+      await payloqaAPI.sendSMS(
+        user.phone,
+        `Your account has been credited with GHS ${amount.toFixed(2)}! ${reason ? `Reason: ${reason}` : ''} New balance: GHS ${user.balance.toFixed(2)} 🎁`
+      );
     } catch (smsError) {
       console.error('Credit SMS failed:', smsError);
     }
@@ -920,8 +681,9 @@ app.post('/api/admin/credit-user', authenticateToken, requireAdmin, async (req, 
   }
 });
 
-// Get All Withdrawals
 app.get('/api/admin/withdrawals', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const withdrawals = await Transaction.find({ type: 'withdrawal' })
       .populate('userId', 'email phone')
@@ -933,8 +695,9 @@ app.get('/api/admin/withdrawals', authenticateToken, requireAdmin, async (req, r
   }
 });
 
-// Approve Withdrawal
 app.post('/api/admin/approve-withdrawal', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { transactionId } = req.body;
 
@@ -962,16 +725,10 @@ app.post('/api/admin/approve-withdrawal', authenticateToken, requireAdmin, async
     await transaction.save();
 
     try {
-      const message = `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been approved! The funds will be sent to your account within 24 hours. 💰`;
-      const smsResponse = await payloqaAPI.sendSMS(user.phone, message);
-
-      await SMSLog.create({
-        phones: [user.phone],
-        message: message,
-        status: smsResponse.success ? 'sent' : 'failed',
-        sentBy: req.user.id,
-        response: smsResponse
-      });
+      await payloqaAPI.sendSMS(
+        user.phone,
+        `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been approved! The funds will be sent to your account within 24 hours. 💰`
+      );
     } catch (smsError) {
       console.error('Withdrawal approval SMS failed:', smsError);
     }
@@ -986,8 +743,9 @@ app.post('/api/admin/approve-withdrawal', authenticateToken, requireAdmin, async
   }
 });
 
-// Reject Withdrawal
 app.post('/api/admin/reject-withdrawal', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { transactionId, reason } = req.body;
 
@@ -1007,16 +765,10 @@ app.post('/api/admin/reject-withdrawal', authenticateToken, requireAdmin, async 
     await transaction.save();
 
     try {
-      const message = `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been rejected. ${reason ? `Reason: ${reason}` : 'Please contact support for more information.'}`;
-      const smsResponse = await payloqaAPI.sendSMS(transaction.userId.phone, message);
-
-      await SMSLog.create({
-        phones: [transaction.userId.phone],
-        message: message,
-        status: smsResponse.success ? 'sent' : 'failed',
-        sentBy: req.user.id,
-        response: smsResponse
-      });
+      await payloqaAPI.sendSMS(
+        transaction.userId.phone,
+        `Your withdrawal request of GHS ${transaction.amount.toFixed(2)} has been rejected. ${reason ? `Reason: ${reason}` : 'Please contact support for more information.'}`
+      );
     } catch (smsError) {
       console.error('Withdrawal rejection SMS failed:', smsError);
     }
@@ -1031,8 +783,9 @@ app.post('/api/admin/reject-withdrawal', authenticateToken, requireAdmin, async 
   }
 });
 
-// Update Game Settings
 app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { houseFee, maxBet, minBet, payoutMultipliers } = req.body;
 
@@ -1061,8 +814,9 @@ app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req,
   }
 });
 
-// Send SMS to Users
 app.post('/api/admin/send-sms', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { userIds, message } = req.body;
 
@@ -1107,8 +861,9 @@ app.post('/api/admin/send-sms', authenticateToken, requireAdmin, async (req, res
   }
 });
 
-// Send SMS to All Users
 app.post('/api/admin/send-sms-all', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const { message } = req.body;
 
@@ -1144,8 +899,9 @@ app.post('/api/admin/send-sms-all', authenticateToken, requireAdmin, async (req,
   }
 });
 
-// Get SMS Logs
 app.get('/api/admin/sms-logs', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const logs = await SMSLog.find()
       .populate('sentBy', 'email')
@@ -1158,8 +914,9 @@ app.get('/api/admin/sms-logs', authenticateToken, requireAdmin, async (req, res)
   }
 });
 
-// Get Dashboard Stats
 app.get('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
   try {
     const totalUsers = await User.countDocuments({ isAdmin: false });
     const totalBalance = await User.aggregate([
@@ -1210,92 +967,11 @@ app.get('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
-// Admin Get All Spin History
-app.get('/api/admin/spin-history', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const history = await SpinGameHistory.find()
-      .populate('userId', 'email phone')
-      .sort({ createdAt: -1 })
-      .limit(100);
-
-    res.json({ success: true, history });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to fetch admin spin history' });
-  }
-});
-
-// Toggle Block User
-app.post('/api/admin/toggle-block-user', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { userId } = req.body;
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    if (user.isAdmin) {
-      return res.status(403).json({ success: false, error: 'Cannot block administrative accounts' });
-    }
-
-    user.isBlocked = !user.isBlocked;
-    await user.save();
-
-    res.json({ success: true, message: `User ${user.isBlocked ? 'blocked' : 'unblocked'} successfully`, isBlocked: user.isBlocked });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to toggle user ban state' });
-  }
-});
-
-// Delete User
-app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-
-    if (user.isAdmin) {
-      return res.status(403).json({ success: false, error: 'Cannot delete administrative accounts' });
-    }
-
-    // Clean up related data to prevent orphaned records.
-    await Transaction.deleteMany({ userId: user._id });
-    await GameHistory.deleteMany({ userId: user._id });
-
-    // Actually delete the user
-    await User.findByIdAndDelete(userId);
-
-    res.json({ success: true, message: 'User and associated data completely removed from system' });
-  } catch (error) {
-    console.error('Failed to delete user:', error);
-    res.status(500).json({ success: false, error: 'Failed to remove user' });
-  }
-});
-
 // ============================================================================
-// DATABASE CONNECTION & SERVER START
+// EXPORT FIREBASE CLOUD FUNCTION
 // ============================================================================
 
-const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/lucky-triple';
-
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📡 API: http://localhost:${PORT}/api`);
-      console.log(`🌐 Webhook URL: ${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payments/webhook`);
-    });
-  })
-  .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
-  });
-
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Promise Rejection:', err);
+exports.api = functions.https.onRequest(async (req, res) => {
+  await connectToDatabase();
+  return app(req, res);
 });

@@ -1,0 +1,79 @@
+[debug] [2026-03-21T13:44:23.192Z] ----------------------------------------------------------------------
+[debug] [2026-03-21T13:44:23.195Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\hp\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2026-03-21T13:44:23.195Z] CLI Version:   15.11.0
+[debug] [2026-03-21T13:44:23.195Z] Platform:      win32
+[debug] [2026-03-21T13:44:23.196Z] Node Version:  v24.11.1
+[debug] [2026-03-21T13:44:23.196Z] Time:          Sat Mar 21 2026 13:44:23 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-03-21T13:44:23.196Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-03-21T13:44:23.199Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\hp\Desktop\projects\lucky-triple
+
+[debug] [2026-03-21T13:44:26.969Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-03-21T13:44:26.970Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[info] i  If you want to create a project in a Google Cloud organization or folder, please use "firebase projects:create" instead, and return to this command when you've created the project. 
+[debug] [2026-03-21T13:49:41.372Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-21T13:49:41.372Z] > authorizing via signed-in user (bt.databse@gmail.com)
+[debug] [2026-03-21T13:51:07.756Z] Checked if tokens are valid: false, expires at: 1773610517626
+[debug] [2026-03-21T13:51:07.756Z] Checked if tokens are valid: false, expires at: 1773610517626
+[debug] [2026-03-21T13:51:07.757Z] > refreshing access token with scopes: []
+[debug] [2026-03-21T13:51:07.760Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-21T13:51:07.760Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-21T13:51:08.155Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-03-21T13:51:08.155Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-21T13:51:08.172Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1/projects:checkProjectId [none]
+[debug] [2026-03-21T13:51:08.172Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"proposedId":"Lucky-triple"}
+[debug] [2026-03-21T13:51:09.179Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1/projects:checkProjectId 200
+[debug] [2026-03-21T13:51:09.179Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"projectIdStatus":"PROJECT_ID_NOT_VALID","suggestedProjectId":"lucky-triple"}
+[debug] [2026-03-21T13:51:17.373Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:17.373Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:17.374Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1/projects:checkProjectId [none]
+[debug] [2026-03-21T13:51:17.374Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"proposedId":"Lucky-triple-game"}
+[debug] [2026-03-21T13:51:17.970Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1/projects:checkProjectId 200
+[debug] [2026-03-21T13:51:17.971Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"projectIdStatus":"PROJECT_ID_NOT_VALID","suggestedProjectId":"lucky-triple-game"}
+[debug] [2026-03-21T13:51:27.415Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:27.416Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:27.417Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1/projects:checkProjectId [none]
+[debug] [2026-03-21T13:51:27.417Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"proposedId":"Luckytriplegame"}
+[debug] [2026-03-21T13:51:28.114Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1/projects:checkProjectId 200
+[debug] [2026-03-21T13:51:28.115Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"projectIdStatus":"PROJECT_ID_NOT_VALID","suggestedProjectId":"luckytriplegame"}
+[debug] [2026-03-21T13:51:35.659Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:35.660Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:35.660Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1/projects:checkProjectId [none]
+[debug] [2026-03-21T13:51:35.661Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"proposedId":"Luckytriplegame6"}
+[debug] [2026-03-21T13:51:36.171Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1/projects:checkProjectId 200
+[debug] [2026-03-21T13:51:36.171Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"projectIdStatus":"PROJECT_ID_NOT_VALID","suggestedProjectId":"luckytriplegame6"}
+[debug] [2026-03-21T13:51:45.010Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:45.010Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:45.011Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1/projects:checkProjectId [none]
+[debug] [2026-03-21T13:51:45.011Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"proposedId":"Luckytriplegame6."}
+[debug] [2026-03-21T13:51:45.403Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1/projects:checkProjectId 400
+[debug] [2026-03-21T13:51:45.403Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1/projects:checkProjectId {"error":{"code":400,"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT"}}
+[debug] [2026-03-21T13:51:45.405Z] Couldn't check if project ID Luckytriplegame6. is available. Original error: FirebaseError: Failed to check if project ID is available. See firebase-debug.log for more info.
+[debug] [2026-03-21T13:51:55.523Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:55.524Z] Checked if tokens are valid: true, expires at: 1774104667155
+[debug] [2026-03-21T13:51:55.524Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects [none]
+[debug] [2026-03-21T13:51:55.524Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects {"projectId":"Luckytriplegame6.","name":"Luckytriplegame6."}
+[debug] [2026-03-21T13:51:57.010Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects 400
+[debug] [2026-03-21T13:51:57.010Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects {"error":{"code":400,"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"field":"project_id","description":"project_id contains invalid characters"},{"field":"display_name","description":"project display name contains invalid characters"}]},{"@type":"type.googleapis.com/google.rpc.Help","links":[{"url":"https://cloud.google.com/resource-manager/reference/rest/v1/projects"}]}]}}
+[debug] [2026-03-21T13:51:57.709Z] FirebaseError: Request to https://cloudresourcemanager.googleapis.com/v1/projects had HTTP Error: 400, Request contains an invalid argument.
+    at responseToError (C:\Users\hp\AppData\Roaming\npm\node_modules\firebase-tools\lib\responseToError.js:53:12)
+    at RetryOperation._fn (C:\Users\hp\AppData\Roaming\npm\node_modules\firebase-tools\lib\apiv2.js:333:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[error] 
+[error] Error: Failed to create project. See firebase-debug.log for more info.
