@@ -151,14 +151,13 @@ const payloqaAPI = {
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  phone: { type: String, required: true, unique: true },
+  phone: { type: String, required: true },
   balance: { type: Number, default: 0 },
   isAdmin: { type: Boolean, default: false },
-  isBlocked: { type: Boolean, default: false },
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Referrer', default: null }, // ADD THIS
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date }
 });
-
 const User = mongoose.model('User', userSchema);
 
 // Transaction Model
@@ -268,14 +267,33 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+const authenticateReferrer = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, referrer) => {
+    if (err || !referrer.isReferrer) {
+      return res.status(403).json({ success: false, error: 'Invalid referrer token' });
+    }
+    req.referrer = referrer;
+    next();
+  });
+};
+
 // ============================================================================
 // ROUTES - AUTHENTICATION
 // ============================================================================
 
 // Sign Up
 app.post('/api/auth/signup', async (req, res) => {
+  await connectToDatabase();
+  
   try {
-    const { email, password, phone } = req.body;
+    const { email, password, phone, referralCode } = req.body;
 
     if (!email || !password || !phone) {
       return res.status(400).json({ success: false, error: 'All fields are required' });
@@ -286,23 +304,41 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email already exists' });
     }
 
-    const existingPhone = await User.findOne({ phone });
-    if (existingPhone) {
-      return res.status(400).json({ success: false, error: 'Phone number already registered' });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    let referrerId = null;
+    if (referralCode) {
+      const referrer = await Referrer.findOne({ 
+        referralCode: referralCode.toUpperCase().trim(),
+        isApproved: true,
+        isActive: true 
+      });
+      
+      if (referrer) {
+        referrerId = referrer._id;
+        referrer.totalReferrals += 1;
+        await referrer.save();
+        console.log(`✅ Referred by: ${referrer.email}`);
+      }
+    }
 
     const user = new User({
       email,
       password: hashedPassword,
       phone,
+      referredBy: referrerId,
       isAdmin: email.toLowerCase().includes('admin')
     });
 
     await user.save();
 
-    // Send welcome SMS
+    if (referrerId) {
+      await ReferralStats.create({
+        referrerId: referrerId,
+        userId: user._id
+      });
+    }
+
     try {
       await payloqaAPI.sendSMS(
         phone,
@@ -314,7 +350,7 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, isAdmin: user.isAdmin },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -683,6 +719,9 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
         status: 'completed',
         processedAt: new Date()
       });
+
+      // ADD THIS LINE:
+      await calculateAndPayCommission(user._id, gameHistory._id, winAmount);
     }
 
     // Send SMS for big wins
@@ -849,6 +888,132 @@ app.get('/api/game/settings', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to fetch settings' });
   }
 });
+
+// ============================================================================
+// REFERRAL SYSTEM MODELS
+// ============================================================================
+
+const referrerSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phone: { type: String, required: true },
+  referralCode: { type: String, required: true, unique: true, index: true },
+  commissionBalance: { type: Number, default: 0 },
+  totalEarnings: { type: Number, default: 0 },
+  totalReferrals: { type: Number, default: 0 },
+  commissionRate: { type: Number, default: 10 },
+  isApproved: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: { type: Date },
+  createdAt: { type: Date, default: Date.now },
+  lastLogin: { type: Date }
+});
+
+const Referrer = mongoose.model('Referrer', referrerSchema);
+
+const referralStatsSchema = new mongoose.Schema({
+  referrerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Referrer', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  totalGames: { type: Number, default: 0 },
+  totalWins: { type: Number, default: 0 },
+  totalWinAmount: { type: Number, default: 0 },
+  commissionEarned: { type: Number, default: 0 },
+  lastActivity: { type: Date, default: Date.now }
+});
+
+const ReferralStats = mongoose.model('ReferralStats', referralStatsSchema);
+
+const commissionTransactionSchema = new mongoose.Schema({
+  referrerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Referrer', required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  gameId: { type: mongoose.Schema.Types.ObjectId, ref: 'GameHistory', required: true },
+  winAmount: { type: Number, required: true },
+  commissionAmount: { type: Number, required: true },
+  commissionRate: { type: Number, required: true },
+  status: { type: String, enum: ['pending', 'paid'], default: 'pending' },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const CommissionTransaction = mongoose.model('CommissionTransaction', commissionTransactionSchema);
+
+const referrerWithdrawalSchema = new mongoose.Schema({
+  referrerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Referrer', required: true },
+  amount: { type: Number, required: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  reference: { type: String },
+  paymentDetails: { type: Object },
+  rejectionReason: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  processedAt: { type: Date },
+  processedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
+const ReferrerWithdrawal = mongoose.model('ReferrerWithdrawal', referrerWithdrawalSchema);
+
+// ============================================================================
+// HELPER FUNCTIONS - REFERRAL
+// ============================================================================
+
+function generateReferralCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'REF_';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+async function calculateAndPayCommission(userId, gameId, winAmount) {
+  try {
+    const user = await User.findById(userId).populate('referredBy');
+    
+    if (!user.referredBy) return;
+
+    const referrer = user.referredBy;
+    
+    if (!referrer.isApproved || !referrer.isActive) {
+      console.log('Referrer not approved or inactive');
+      return;
+    }
+
+    const commissionRate = referrer.commissionRate / 100;
+    const commissionAmount = winAmount * commissionRate;
+
+    referrer.commissionBalance += commissionAmount;
+    referrer.totalEarnings += commissionAmount;
+    await referrer.save();
+
+    await CommissionTransaction.create({
+      referrerId: referrer._id,
+      userId: user._id,
+      gameId: gameId,
+      winAmount: winAmount,
+      commissionAmount: commissionAmount,
+      commissionRate: referrer.commissionRate,
+      status: 'pending'
+    });
+
+    let stats = await ReferralStats.findOne({ referrerId: referrer._id, userId: user._id });
+    if (!stats) {
+      stats = new ReferralStats({
+        referrerId: referrer._id,
+        userId: user._id
+      });
+    }
+    stats.totalWins += 1;
+    stats.totalWinAmount += winAmount;
+    stats.commissionEarned += commissionAmount;
+    stats.totalGames += 1;
+    stats.lastActivity = new Date();
+    await stats.save();
+
+    console.log(`💰 Commission: GHS ${commissionAmount.toFixed(2)} → ${referrer.email}`);
+  } catch (error) {
+    console.error('Commission error:', error);
+  }
+}
 
 // ============================================================================
 // ROUTES - ADMIN
@@ -1272,6 +1437,557 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, 
   } catch (error) {
     console.error('Failed to delete user:', error);
     res.status(500).json({ success: false, error: 'Failed to remove user' });
+  }
+});
+
+// ============================================================================
+// ROUTES - REFERRAL SYSTEM
+// ============================================================================
+
+// Referrer Signup
+app.post('/api/referral/signup', async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const { name, email, password, phone } = req.body;
+
+    if (!name || !email || !password || !phone) {
+      return res.status(400).json({ success: false, error: 'All fields are required' });
+    }
+
+    const existingReferrer = await Referrer.findOne({ email });
+    if (existingReferrer) {
+      return res.status(400).json({ success: false, error: 'Email already registered' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    let referralCode;
+    let isUnique = false;
+    while (!isUnique) {
+      referralCode = generateReferralCode();
+      const existing = await Referrer.findOne({ referralCode });
+      if (!existing) isUnique = true;
+    }
+
+    const referrer = new Referrer({
+      name,
+      email,
+      password: hashedPassword,
+      phone,
+      referralCode,
+      isApproved: false
+    });
+
+    await referrer.save();
+
+    try {
+      await payloqaAPI.sendSMS(
+        phone,
+        `Welcome to Lucky Triple Referral Program! Your account is pending admin approval. You'll receive an SMS once approved. 🎰`
+      );
+    } catch (smsError) {
+      console.error('Referrer SMS failed:', smsError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Account created successfully. Pending admin approval.',
+      referrer: {
+        name: referrer.name,
+        email: referrer.email,
+        isApproved: false
+      }
+    });
+  } catch (error) {
+    console.error('Referrer signup error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Referrer Login
+app.post('/api/referral/login', async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const { email, password } = req.body;
+
+    const referrer = await Referrer.findOne({ email });
+    if (!referrer) {
+      return res.status(400).json({ success: false, error: 'Invalid credentials' });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, referrer.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ success: false, error: 'Invalid credentials' });
+    }
+
+    if (!referrer.isApproved) {
+      return res.status(403).json({ success: false, error: 'Account pending admin approval' });
+    }
+
+    if (!referrer.isActive) {
+      return res.status(403).json({ success: false, error: 'Account deactivated. Contact admin.' });
+    }
+
+    referrer.lastLogin = new Date();
+    await referrer.save();
+
+    const token = jwt.sign(
+      { id: referrer._id, email: referrer.email, isReferrer: true },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      referrer: {
+        _id: referrer._id,
+        name: referrer.name,
+        email: referrer.email,
+        phone: referrer.phone,
+        referralCode: referrer.referralCode,
+        commissionBalance: referrer.commissionBalance,
+        totalEarnings: referrer.totalEarnings,
+        commissionRate: referrer.commissionRate
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Referrer login error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get Referrer Info
+app.get('/api/referral/me', authenticateReferrer, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const referrer = await Referrer.findById(req.referrer.id).select('-password');
+    res.json({ success: true, referrer });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get Referrer Dashboard Stats
+app.get('/api/referral/stats', authenticateReferrer, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const referrer = await Referrer.findById(req.referrer.id);
+    
+    const totalUsers = await User.countDocuments({ referredBy: referrer._id });
+    const activeUsers = await ReferralStats.countDocuments({ 
+      referrerId: referrer._id,
+      lastActivity: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+    });
+
+    const todayCommissions = await CommissionTransaction.aggregate([
+      {
+        $match: {
+          referrerId: referrer._id,
+          createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+    ]);
+
+    const monthlyCommissions = await CommissionTransaction.aggregate([
+      {
+        $match: {
+          referrerId: referrer._id,
+          createdAt: { $gte: new Date(new Date().setDate(1)) }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        totalReferrals: totalUsers,
+        activeReferrals: activeUsers,
+        commissionBalance: referrer.commissionBalance,
+        totalEarnings: referrer.totalEarnings,
+        todayEarnings: todayCommissions[0]?.total || 0,
+        monthlyEarnings: monthlyCommissions[0]?.total || 0,
+        commissionRate: referrer.commissionRate
+      }
+    });
+  } catch (error) {
+    console.error('Stats error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch stats' });
+  }
+});
+
+// Get Referred Users
+app.get('/api/referral/users', authenticateReferrer, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const users = await User.find({ referredBy: req.referrer.id })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    const usersWithStats = await Promise.all(users.map(async (user) => {
+      const stats = await ReferralStats.findOne({ 
+        referrerId: req.referrer.id, 
+        userId: user._id 
+      });
+
+      return {
+        _id: user._id,
+        email: user.email,
+        phone: user.phone,
+        balance: user.balance,
+        createdAt: user.createdAt,
+        totalGames: stats?.totalGames || 0,
+        totalWins: stats?.totalWins || 0,
+        totalWinAmount: stats?.totalWinAmount || 0,
+        commissionEarned: stats?.commissionEarned || 0,
+        lastActivity: stats?.lastActivity
+      };
+    }));
+
+    res.json({ success: true, users: usersWithStats });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch users' });
+  }
+});
+
+// Get Commission History
+app.get('/api/referral/commissions', authenticateReferrer, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const commissions = await CommissionTransaction.find({ 
+      referrerId: req.referrer.id 
+    })
+      .populate('userId', 'email')
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.json({ success: true, commissions });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch commissions' });
+  }
+});
+
+// Request Withdrawal
+app.post('/api/referral/withdraw', authenticateReferrer, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const { amount } = req.body;
+    const referrer = await Referrer.findById(req.referrer.id);
+
+    const MIN_WITHDRAWAL = 50;
+
+    if (!amount || amount < MIN_WITHDRAWAL) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Minimum withdrawal is GHS ${MIN_WITHDRAWAL}` 
+      });
+    }
+
+    if (referrer.commissionBalance < amount) {
+      return res.status(400).json({ success: false, error: 'Insufficient balance' });
+    }
+
+    const withdrawal = new ReferrerWithdrawal({
+      referrerId: referrer._id,
+      amount,
+      reference: `RWTD_${Date.now()}_${referrer._id}`,
+      status: 'pending'
+    });
+    await withdrawal.save();
+
+    try {
+      await payloqaAPI.sendSMS(
+        referrer.phone,
+        `Withdrawal request: GHS ${amount.toFixed(2)} submitted. Pending admin approval. 📤`
+      );
+    } catch (smsError) {
+      console.error('Withdrawal SMS failed:', smsError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Withdrawal request submitted',
+      withdrawal
+    });
+  } catch (error) {
+    console.error('Withdrawal error:', error);
+    res.status(500).json({ success: false, error: 'Failed to submit withdrawal' });
+  }
+});
+
+// Get Withdrawal History
+app.get('/api/referral/withdrawals', authenticateReferrer, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const withdrawals = await ReferrerWithdrawal.find({ 
+      referrerId: req.referrer.id 
+    }).sort({ createdAt: -1 });
+
+    res.json({ success: true, withdrawals });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch withdrawals' });
+  }
+});
+
+// ============================================================================
+// ADMIN ROUTES - REFERRER MANAGEMENT
+// ============================================================================
+
+// Get All Referrers
+app.get('/api/admin/referrers', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const referrers = await Referrer.find()
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    const referrersWithStats = await Promise.all(referrers.map(async (ref) => {
+      const totalUsers = await User.countDocuments({ referredBy: ref._id });
+      const totalCommissions = await CommissionTransaction.aggregate([
+        { $match: { referrerId: ref._id } },
+        { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+      ]);
+
+      return {
+        ...ref.toObject(),
+        stats: {
+          totalReferrals: totalUsers,
+          totalCommissions: totalCommissions[0]?.total || 0
+        }
+      };
+    }));
+
+    res.json({ success: true, referrers: referrersWithStats });
+  } catch (error) {
+    console.error('Get referrers error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch referrers' });
+  }
+});
+
+// Approve Referrer
+app.post('/api/admin/approve-referrer', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const { referrerId } = req.body;
+
+    const referrer = await Referrer.findById(referrerId);
+    if (!referrer) {
+      return res.status(404).json({ success: false, error: 'Referrer not found' });
+    }
+
+    if (referrer.isApproved) {
+      return res.status(400).json({ success: false, error: 'Already approved' });
+    }
+
+    referrer.isApproved = true;
+    referrer.approvedBy = req.user.id;
+    referrer.approvedAt = new Date();
+    await referrer.save();
+
+    try {
+      await payloqaAPI.sendSMS(
+        referrer.phone,
+        `Congratulations! Your referral account has been approved. Login now and start earning commissions! Your referral code: ${referrer.referralCode} 🎉`
+      );
+    } catch (smsError) {
+      console.error('Approval SMS failed:', smsError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Referrer approved successfully'
+    });
+  } catch (error) {
+    console.error('Approve referrer error:', error);
+    res.status(500).json({ success: false, error: 'Failed to approve referrer' });
+  }
+});
+
+// Update Referrer Settings
+app.put('/api/admin/referrer/:id', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const { commissionRate, isActive } = req.body;
+    const referrer = await Referrer.findById(req.params.id);
+
+    if (!referrer) {
+      return res.status(404).json({ success: false, error: 'Referrer not found' });
+    }
+
+    if (commissionRate !== undefined) {
+      referrer.commissionRate = commissionRate;
+    }
+    if (isActive !== undefined) {
+      referrer.isActive = isActive;
+    }
+
+    await referrer.save();
+
+    res.json({
+      success: true,
+      message: 'Referrer updated successfully',
+      referrer
+    });
+  } catch (error) {
+    console.error('Update referrer error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update referrer' });
+  }
+});
+
+// Get Referrer Withdrawals (Admin)
+app.get('/api/admin/referrer-withdrawals', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const withdrawals = await ReferrerWithdrawal.find()
+      .populate('referrerId', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, withdrawals });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch withdrawals' });
+  }
+});
+
+// Approve Referrer Withdrawal
+app.post('/api/admin/approve-referrer-withdrawal', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const { withdrawalId } = req.body;
+
+    const withdrawal = await ReferrerWithdrawal.findById(withdrawalId).populate('referrerId');
+    if (!withdrawal) {
+      return res.status(404).json({ success: false, error: 'Withdrawal not found' });
+    }
+
+    if (withdrawal.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Already processed' });
+    }
+
+    const referrer = withdrawal.referrerId;
+
+    if (referrer.commissionBalance < withdrawal.amount) {
+      return res.status(400).json({ success: false, error: 'Insufficient balance' });
+    }
+
+    referrer.commissionBalance -= withdrawal.amount;
+    await referrer.save();
+
+    withdrawal.status = 'approved';
+    withdrawal.processedAt = new Date();
+    withdrawal.processedBy = req.user.id;
+    await withdrawal.save();
+
+    try {
+      await payloqaAPI.sendSMS(
+        referrer.phone,
+        `Your withdrawal of GHS ${withdrawal.amount.toFixed(2)} has been approved! Funds will be sent within 24 hours. 💰`
+      );
+    } catch (smsError) {
+      console.error('Approval SMS failed:', smsError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Withdrawal approved successfully'
+    });
+  } catch (error) {
+    console.error('Approve withdrawal error:', error);
+    res.status(500).json({ success: false, error: 'Failed to approve withdrawal' });
+  }
+});
+
+// Reject Referrer Withdrawal
+app.post('/api/admin/reject-referrer-withdrawal', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const { withdrawalId, reason } = req.body;
+
+    const withdrawal = await ReferrerWithdrawal.findById(withdrawalId).populate('referrerId');
+    if (!withdrawal) {
+      return res.status(404).json({ success: false, error: 'Withdrawal not found' });
+    }
+
+    if (withdrawal.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Already processed' });
+    }
+
+    withdrawal.status = 'rejected';
+    withdrawal.rejectionReason = reason || 'Rejected by admin';
+    withdrawal.processedAt = new Date();
+    withdrawal.processedBy = req.user.id;
+    await withdrawal.save();
+
+    try {
+      await payloqaAPI.sendSMS(
+        withdrawal.referrerId.phone,
+        `Your withdrawal of GHS ${withdrawal.amount.toFixed(2)} was rejected. ${reason ? `Reason: ${reason}` : 'Contact support for details.'}`
+      );
+    } catch (smsError) {
+      console.error('Rejection SMS failed:', smsError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Withdrawal rejected'
+    });
+  } catch (error) {
+    console.error('Reject withdrawal error:', error);
+    res.status(500).json({ success: false, error: 'Failed to reject withdrawal' });
+  }
+});
+
+// Get Referral System Stats (Admin)
+app.get('/api/admin/referral-system-stats', authenticateToken, requireAdmin, async (req, res) => {
+  await connectToDatabase();
+  
+  try {
+    const totalReferrers = await Referrer.countDocuments();
+    const approvedReferrers = await Referrer.countDocuments({ isApproved: true });
+    const activeReferrers = await Referrer.countDocuments({ isApproved: true, isActive: true });
+    
+    const totalReferred = await User.countDocuments({ referredBy: { $ne: null } });
+    
+    const totalCommissions = await CommissionTransaction.aggregate([
+      { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+    ]);
+
+    const pendingWithdrawals = await ReferrerWithdrawal.aggregate([
+      { $match: { status: 'pending' } },
+      { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$amount' } } }
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        totalReferrers,
+        approvedReferrers,
+        activeReferrers,
+        totalReferred,
+        totalCommissionsPaid: totalCommissions[0]?.total || 0,
+        pendingWithdrawalsCount: pendingWithdrawals[0]?.count || 0,
+        pendingWithdrawalsAmount: pendingWithdrawals[0]?.total || 0
+      }
+    });
+  } catch (error) {
+    console.error('System stats error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch stats' });
   }
 });
 
