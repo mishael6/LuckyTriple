@@ -1,10 +1,11 @@
-
 import axios from 'axios';
 // ============================================================================
 // API CONFIGURATION
 // ============================================================================
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+console.log('🔗 API Base URL:', API_BASE_URL);
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL;
@@ -26,8 +27,8 @@ export const API = {
     return response.data;
   },
 
-  signup: async (email, password, phone) => {
-    const response = await axios.post('/auth/signup', { email, password, phone });
+  signup: async (email, password, phone, referralCode) => {
+    const response = await axios.post('/auth/signup', { email, password, phone, referralCode });
     return response.data;
   },
 
@@ -148,6 +149,42 @@ export const API = {
 
   removeUser: async (userId) => {
     const response = await axios.delete(`/admin/users/${userId}`);
+    return response.data;
+  },  // ← ADDED COMMA HERE!
+
+  // Referral Admin Routes
+  getReferrers: async () => {
+    const response = await axios.get('/admin/referrers');
+    return response.data;
+  },
+
+  approveReferrer: async (referrerId) => {
+    const response = await axios.post('/admin/approve-referrer', { referrerId });
+    return response.data;
+  },
+
+  updateReferrer: async (referrerId, updates) => {
+    const response = await axios.put(`/admin/referrer/${referrerId}`, updates);
+    return response.data;
+  },
+
+  getReferrerWithdrawals: async () => {
+    const response = await axios.get('/admin/referrer-withdrawals');
+    return response.data;
+  },
+
+  approveReferrerWithdrawal: async (withdrawalId) => {
+    const response = await axios.post('/admin/approve-referrer-withdrawal', { withdrawalId });
+    return response.data;
+  },
+
+  rejectReferrerWithdrawal: async (withdrawalId, reason) => {
+    const response = await axios.post('/admin/reject-referrer-withdrawal', { withdrawalId, reason });
+    return response.data;
+  },
+
+  getReferralSystemStats: async () => {
+    const response = await axios.get('/admin/referral-system-stats');
     return response.data;
   }
 };

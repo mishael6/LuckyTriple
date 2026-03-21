@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { API } from '../../api-helper';
+import { ReferrerManagement } from './referral/ReferrerManagement';
+import { ReferrerWithdrawals } from './referral/ReferrerWithdrawals';
+import { ReferralStats } from './referral/ReferralStats';
 
 // ============================================================================
 // ADMIN DASHBOARD
@@ -212,6 +215,9 @@ export const AdminDashboard = ({ user, onLogout }) => {
           >
             ⚙️ Settings
           </button>
+          <button onClick={() => setView('referral-stats')}>📊 Referral Stats</button>
+          <button onClick={() => setView('referrers')}>👥 Referrers</button>
+          <button onClick={() => setView('referrer-withdrawals')}>💸 Referrer Withdrawals</button>
           <button onClick={onLogout} className="logout-btn">Logout</button>
         </div>
       </nav>
@@ -592,6 +598,9 @@ export const AdminDashboard = ({ user, onLogout }) => {
             </div>
           </div>
         )}
+        {view === 'referral-stats' && <ReferralStats />}
+        {view === 'referrers' && <ReferrerManagement />}
+        {view === 'referrer-withdrawals' && <ReferrerWithdrawals />}
       </div>
     </div>
   );

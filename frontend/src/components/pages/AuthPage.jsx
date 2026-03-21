@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { API } from '../../api-helper';
 
 // ============================================================================
@@ -13,6 +13,18 @@ export const AuthPage = ({ onLogin }) => {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+
+  // Detect referral code from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+      setIsLogin(false); // Switch to signup mode
+      console.log('✅ Referral code detected:', ref);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +34,7 @@ export const AuthPage = ({ onLogin }) => {
     try {
       const result = isLogin 
         ? await API.login(email, password)
-        : await API.signup(email, password, phone);
+        : await API.signup(email, password, phone, referralCode); // ADDED referralCode here
       
       if (result.success) {
         localStorage.setItem('token', result.token);
@@ -64,6 +76,21 @@ export const AuthPage = ({ onLogin }) => {
             Sign Up
           </button>
         </div>
+
+        {/* Show referral code banner when present */}
+        {referralCode && !isLogin && (
+          <div style={{
+            background: '#d4edda',
+            color: '#155724',
+            padding: '12px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            🎉 Signing up with referral code: {referralCode}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
