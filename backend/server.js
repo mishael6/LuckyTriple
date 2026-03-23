@@ -10,6 +10,23 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 require('dotenv').config();
 
+// NOTE:
+// Some routes (including referrer auth) reference `JWT_SECRET` and `connectToDatabase`.
+// Those were missing from this standalone server file, which can cause requests to
+// never resolve on the client (e.g., referral login shows "Loading..." forever).
+const JWT_SECRET = process.env.JWT_SECRET || 'myGameSecret123XYZ999';
+
+let cachedDb = null;
+async function connectToDatabase() {
+  // If the app already connected during startup, don't reconnect.
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (cachedDb && mongoose.connection.readyState !== 0) return cachedDb;
+
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/lucky-triple';
+  cachedDb = await mongoose.connect(uri);
+  return cachedDb;
+}
+
 const app = express();
 
 // ============================================================================
