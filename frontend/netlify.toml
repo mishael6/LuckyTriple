@@ -4,9 +4,8 @@ to = "https://luckytriple-production.up.railway.app"
 status = 200
 force = true
 
-# SPA fallback: ensure React Router can handle client-side routes
+# SPA fallback for referrer portal routes
 [[redirects]]
-from = "/*"
+from = "/referral/*"
 to = "/index.html"
 status = 200
-force = true
