@@ -1574,7 +1574,8 @@ td {
 
 .referral-dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  /* Match the admin dashboard look (dark app background from <body>) */
+  background: transparent;
   padding-bottom: 40px;
 }
 
@@ -1751,7 +1752,8 @@ table tr:last-child td {
 }
 
 table tr:hover {
-  background: #f9f9f9;
+  /* Prevent the "turns white on hover" effect */
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .status-badge {
