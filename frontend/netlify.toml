@@ -9,3 +9,18 @@ force = true
 from = "/referral/*"
 to = "/index.html"
 status = 200
+
+[[redirects]]
+from = "/referral"
+to = "/index.html"
+status = 200
+
+[[redirects]]
+from = "/signup"
+to = "/index.html"
+status = 200
+
+[[redirects]]
+from = "/signup/*"
+to = "/index.html"
+status = 200
