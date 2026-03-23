@@ -1,5 +1,12 @@
 [[redirects]]
-  from = "/api/*"
-  to = "https://luckytriple-production.up.railway.app"
-  status = 200
-  force = true
+from = "/api/*"
+to = "https://luckytriple-production.up.railway.app"
+status = 200
+force = true
+
+# SPA fallback: ensure React Router can handle client-side routes
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+force = true
