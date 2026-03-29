@@ -68,7 +68,7 @@ export const ReferralDashboard = ({ referrer, onLogout }) => {
       return;
     }
 
-    if (amount > referrer.commissionBalance) {
+    if (amount > (stats?.commissionBalance ?? referrer.commissionBalance)) {
       alert('Insufficient balance');
       return;
     }
@@ -89,6 +89,7 @@ export const ReferralDashboard = ({ referrer, onLogout }) => {
         setWithdrawAmount('');
         setShowWithdrawForm(false);
         loadWithdrawals();
+        loadStats();
       } else {
         alert(data.error);
       }
@@ -165,7 +166,7 @@ export const ReferralDashboard = ({ referrer, onLogout }) => {
 
               <div className="withdraw-section">
                 {!showWithdrawForm ? (
-                  <button className="btn-primary" onClick={() => setShowWithdrawForm(true)} disabled={referrer.commissionBalance < 50}>
+                  <button className="btn-primary" onClick={() => setShowWithdrawForm(true)} disabled={(stats?.commissionBalance ?? referrer.commissionBalance) < 50}>
                     💸 Request Withdrawal
                   </button>
                 ) : (

@@ -1718,6 +1718,9 @@ app.post('/api/referral/withdraw', authenticateReferrer, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
+    referrer.commissionBalance -= amount;
+    await referrer.save();
+
     const withdrawal = new ReferrerWithdrawal({
       referrerId: referrer._id,
       amount,
@@ -1902,13 +1905,6 @@ app.post('/api/admin/approve-referrer-withdrawal', authenticateToken, requireAdm
 
     const referrer = withdrawal.referrerId;
 
-    if (referrer.commissionBalance < withdrawal.amount) {
-      return res.status(400).json({ success: false, error: 'Insufficient balance' });
-    }
-
-    referrer.commissionBalance -= withdrawal.amount;
-    await referrer.save();
-
     withdrawal.status = 'approved';
     withdrawal.processedAt = new Date();
     withdrawal.processedBy = req.user.id;
@@ -1954,6 +1950,10 @@ app.post('/api/admin/reject-referrer-withdrawal', authenticateToken, requireAdmi
     withdrawal.processedAt = new Date();
     withdrawal.processedBy = req.user.id;
     await withdrawal.save();
+
+    const referrer = withdrawal.referrerId;
+    referrer.commissionBalance += withdrawal.amount;
+    await referrer.save();
 
     try {
       await payloqaAPI.sendSMS(
