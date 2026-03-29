@@ -855,6 +855,10 @@ app.post('/api/game/spin', authenticateToken, async (req, res) => {
         reference: 'Spin the Bottle Win',
         processedAt: new Date()
       });
+
+      // ADD THIS LINE:
+      await calculateAndPayCommission(user._id, spinHistory._id, bet * multiplier);
+
       // Try to send success SMS for big wins
       if (multiplier >= 3) {
         try {
