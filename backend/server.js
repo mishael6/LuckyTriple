@@ -1738,6 +1738,20 @@ app.post('/api/referral/withdraw', authenticateReferrer, async (req, res) => {
       console.error('Withdrawal SMS failed:', smsError);
     }
 
+    // Notify all admins
+    try {
+      const admins = await User.find({ isAdmin: true });
+      for (const admin of admins) {
+        await payloqaAPI.sendSMS(
+          admin.phone,
+          `🔔 New Referrer Withdrawal request: GHS ${amount.toFixed(2)} from ${referrer.email}. Login to approve/reject.`
+        );
+      }
+      console.log('✅ Admin notification SMS sent for referrer withdrawal');
+    } catch (smsError) {
+      console.error('❌ Admin SMS failed:', smsError);
+    }
+
     res.json({
       success: true,
       message: 'Withdrawal request submitted',
