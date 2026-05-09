@@ -2050,3 +2050,48 @@ mongoose.connect(MONGODB_URI)
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Promise Rejection:', err);
 });
+
+app.post('/api/payments/deposit', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  try {
+    const { amount, network, paymentId, reference } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Check if this payment was already recorded
+    const existing = await Transaction.findOne({ reference });
+    if (existing) {
+      return res.json({ success: true, message: 'Already recorded', user });
+    }
+
+    user.balance += parseFloat(amount);
+    await user.save();
+
+    await Transaction.create({
+      userId: user._id,
+      type: 'deposit',
+      amount: parseFloat(amount),
+      status: 'completed',
+      processedAt: new Date(),
+      reference: reference || paymentId,
+    });
+
+    res.json({
+      success: true,
+      message: 'Deposit recorded',
+      user: {
+        _id: user._id,
+        email: user.email,
+        phone: user.phone,
+        balance: user.balance,
+        isAdmin: user.isAdmin,
+      }
+    });
+  } catch (error) {
+    console.error('Deposit error:', error);
+    res.status(500).json({ success: false, error: 'Failed to record deposit' });
+  }
+});
