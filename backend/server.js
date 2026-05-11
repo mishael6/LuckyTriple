@@ -2096,4 +2096,86 @@ app.post('/api/payments/deposit', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  try {
+    const { amount, phone, network } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid amount' });
+    }
+
+    // Format phone to E.164
+    let formattedPhone = phone.replace(/\s|-/g, '');
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '+233' + formattedPhone.substring(1);
+    } else if (formattedPhone.startsWith('233')) {
+      formattedPhone = '+' + formattedPhone;
+    } else if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+233' + formattedPhone;
+    }
+
+    const response = await fetch('https://payments.payloqa.com/api/v1/payments/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': process.env.PAYLOQA_API_KEY,
+        'X-Platform-Id': process.env.PAYLOQA_PLATFORM_ID,
+      },
+      body: JSON.stringify({
+        amount,
+        currency: 'GHS',
+        payment_method: 'mobile_money',
+        phone_number: formattedPhone,
+        network: network.toLowerCase(),
+        offline: true,
+        webhook_url: `${process.env.BASE_URL}/api/payments/webhook`,
+        metadata: {
+          user_id: user._id.toString(),
+          order_reference: `LT-${Date.now()}`,
+        }
+      })
+    });
+
+    const data = await response.json();
+    console.log('Payloqa response:', data);
+
+    if (data.success) {
+      res.json({
+        success: true,
+        paymentId: data.data.payment_id,
+        message: data.data.message,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: data.message || 'Payment initiation failed'
+      });
+    }
+  } catch (error) {
+    console.error('Payment initiate error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/payments/status/:paymentId', authenticateToken, async (req, res) => {
+  await connectToDatabase();
+  try {
+    const { paymentId } = req.params;
+
+    const response = await fetch(`https://payments.payloqa.com/api/v1/payments/${paymentId}`, {
+      headers: {
+        'X-API-Key': process.env.PAYLOQA_API_KEY,
+        'X-Platform-Id': process.env.PAYLOQA_PLATFORM_ID,
+      }
+    });
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 
