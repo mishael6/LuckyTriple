@@ -2294,3 +2294,504 @@ textarea {
 * {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ============================================================================
+   CASINO POLISH — Lobby, background, loading, navigation
+   ============================================================================ */
+
+:root {
+  --casino-gold: #ffd700;
+  --casino-gold-dark: #f0a500;
+  --casino-bg-deep: #0a0e27;
+  --casino-bg-mid: #1a0b2e;
+  --casino-bg-light: #2d1b4e;
+  --casino-glass: rgba(255, 255, 255, 0.05);
+  --casino-border: rgba(255, 255, 255, 0.1);
+}
+
+.game-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.game-main {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+}
+
+/* Animated casino background */
+.casino-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.casino-bg__gradient {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 215, 0, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 35% at 0% 80%, rgba(0, 200, 150, 0.1) 0%, transparent 45%),
+    linear-gradient(135deg, var(--casino-bg-deep) 0%, var(--casino-bg-mid) 50%, var(--casino-bg-light) 100%);
+}
+
+.casino-bg__particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--casino-gold);
+  filter: blur(1px);
+}
+
+/* Brand button in nav */
+.brand-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.25s;
+}
+
+.brand-btn:hover {
+  transform: scale(1.02);
+}
+
+.brand-btn__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--casino-gold) 0%, var(--casino-gold-dark) 100%);
+  color: #000;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 20px;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.35);
+}
+
+.brand-btn__text {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 26px;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, var(--casino-gold) 0%, #ffed4e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.game-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 40px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid var(--casino-border);
+  position: relative;
+  z-index: 1;
+}
+
+.game-breadcrumb__back {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--casino-border);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.game-breadcrumb__back:hover {
+  background: rgba(255, 215, 0, 0.12);
+  color: var(--casino-gold);
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.game-breadcrumb__current {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.game-breadcrumb__current::before {
+  content: '/';
+  margin-right: 12px;
+  opacity: 0.4;
+}
+
+/* Casino lobby */
+.casino-lobby {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+  width: 100%;
+}
+
+.casino-lobby__hero {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.casino-lobby__eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--casino-gold);
+  margin-bottom: 12px;
+  padding: 6px 14px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 100px;
+}
+
+.casino-lobby__title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(36px, 6vw, 56px);
+  letter-spacing: 2px;
+  background: linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, 0.85) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+}
+
+.casino-lobby__subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 16px;
+  max-width: 520px;
+  margin: 0 auto 20px;
+  line-height: 1.6;
+}
+
+.casino-lobby__meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+}
+
+.casino-lobby__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 215, 0, 0.5);
+}
+
+.casino-lobby__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+/* Game cards */
+.game-card {
+  position: relative;
+  background: var(--casino-glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--casino-border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.game-card__glow {
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  opacity: 0.15;
+  filter: blur(40px);
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.game-card--gold .game-card__glow { background: #ffd700; }
+.game-card--emerald .game-card__glow { background: #00c896; }
+.game-card--ruby .game-card__glow { background: #ff4466; }
+.game-card--violet .game-card__glow { background: #9b59f5; }
+
+.game-card:hover .game-card__glow {
+  opacity: 0.35;
+}
+
+.game-card--disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.game-card__tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.game-card--gold .game-card__tag {
+  background: rgba(255, 215, 0, 0.15);
+  color: var(--casino-gold);
+}
+
+.game-card--emerald .game-card__tag {
+  background: rgba(0, 200, 150, 0.15);
+  color: #00c896;
+}
+
+.game-card__icon {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 42px;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.5) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.game-card__title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.game-card__desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.55;
+  margin-bottom: 20px;
+  min-height: 44px;
+}
+
+.game-card__cta {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  background: linear-gradient(135deg, var(--casino-gold) 0%, var(--casino-gold-dark) 100%);
+  color: #000;
+}
+
+.game-card--disabled .game-card__cta {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+}
+
+.game-card:not(.game-card--disabled):hover .game-card__cta {
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.35);
+}
+
+.casino-lobby__trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 48px;
+}
+
+.trust-pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--casino-border);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Premium loading screen */
+.loading-screen {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-screen__bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 40%, rgba(255, 215, 0, 0.15) 0%, transparent 60%),
+    linear-gradient(135deg, var(--casino-bg-deep) 0%, var(--casino-bg-mid) 50%, var(--casino-bg-light) 100%);
+}
+
+.loading-screen__content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.loading-screen__logo {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--casino-gold) 0%, var(--casino-gold-dark) 100%);
+  color: #000;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 32px;
+  letter-spacing: 2px;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.loading-screen__title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 32px;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+  color: #fff;
+}
+
+.loading-screen__bar {
+  width: 200px;
+  height: 4px;
+  margin: 0 auto 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.loading-screen__bar-fill {
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--casino-gold), transparent);
+  border-radius: 4px;
+}
+
+.loading-screen__label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+}
+
+/* Auth polish */
+.logo-mark {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--casino-gold) 0%, var(--casino-gold-dark) 100%);
+  color: #000;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 36px;
+  letter-spacing: 2px;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.35);
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+.auth-card--polished {
+  border-color: rgba(255, 215, 0, 0.15);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 215, 0, 0.05);
+}
+
+.referral-banner {
+  background: rgba(0, 200, 150, 0.12);
+  border: 1px solid rgba(0, 200, 150, 0.3);
+  color: #00c896;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.auth-features {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--casino-border);
+}
+
+.auth-features span {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.bank-card--polished .game-subtitle {
+  margin-bottom: 24px;
+}
+
+/* Nav hover polish */
+.nav-center button:hover:not(.active),
+.logout-btn:hover {
+  background: rgba(255, 215, 0, 0.08);
+  border-color: rgba(255, 215, 0, 0.2);
+  color: #fff;
+}
+
+/* Responsive lobby */
+@media (max-width: 768px) {
+  .top-nav {
+    padding: 16px 20px;
+  }
+
+  .brand-btn__text {
+    display: none;
+  }
+
+  .nav-center {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .game-breadcrumb {
+    padding: 10px 20px;
+  }
+
+  .casino-lobby {
+    padding: 32px 16px 48px;
+  }
+
+  .casino-lobby__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-right .balance-display {
+    display: none;
+  }
+}

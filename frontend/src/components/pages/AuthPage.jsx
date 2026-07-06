@@ -1,10 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { API } from '../../api-helper';
-
-// ============================================================================
-// AUTH PAGE
-// ============================================================================
+import { CasinoBackground } from '../ui/CasinoBackground';
 
 export const AuthPage = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,14 +12,12 @@ export const AuthPage = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [referralCode, setReferralCode] = useState('');
 
-  // Detect referral code from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     if (ref) {
       setReferralCode(ref);
-      setIsLogin(false); // Switch to signup mode
-      console.log('✅ Referral code detected:', ref);
+      setIsLogin(false);
     }
   }, []);
 
@@ -30,12 +25,12 @@ export const AuthPage = ({ onLogin }) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
-      const result = isLogin 
+      const result = isLogin
         ? await API.login(email, password)
-        : await API.signup(email, password, phone, referralCode); // ADDED referralCode here
-      
+        : await API.signup(email, password, phone, referralCode);
+
       if (result.success) {
         localStorage.setItem('token', result.token);
         onLogin(result.user);
@@ -51,25 +46,29 @@ export const AuthPage = ({ onLogin }) => {
 
   return (
     <div className="auth-container">
-      <motion.div 
-        className="auth-card"
-        initial={{ opacity: 0, y: 20 }}
+      <CasinoBackground />
+      <motion.div
+        className="auth-card auth-card--polished"
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="logo-section">
-          <div className="logo">🎰</div>
-          <h1>Lucky Triple</h1>
-          <p>Guess 3 numbers. Win big prizes.</p>
+          <div className="logo-mark">LT</div>
+          <h1>Lucky Triple Casino</h1>
+          <p>Multiple games. Real wins. Payloqa-powered wallet.</p>
         </div>
 
         <div className="auth-tabs">
-          <button 
+          <button
+            type="button"
             className={isLogin ? 'active' : ''}
             onClick={() => setIsLogin(true)}
           >
             Login
           </button>
-          <button 
+          <button
+            type="button"
             className={isLogin ? '' : 'active'}
             onClick={() => setIsLogin(false)}
           >
@@ -77,18 +76,9 @@ export const AuthPage = ({ onLogin }) => {
           </button>
         </div>
 
-        {/* Show referral code banner when present */}
         {referralCode && !isLogin && (
-          <div style={{
-            background: '#d4edda',
-            color: '#155724',
-            padding: '12px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            textAlign: 'center',
-            fontWeight: 'bold'
-          }}>
-            🎉 Signing up with referral code: {referralCode}
+          <div className="referral-banner">
+            Signing up with referral code: <strong>{referralCode}</strong>
           </div>
         )}
 
@@ -110,7 +100,7 @@ export const AuthPage = ({ onLogin }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Enter your password"
               required
             />
           </div>
@@ -131,12 +121,14 @@ export const AuthPage = ({ onLogin }) => {
           {error && <div className="error-message">{error}</div>}
 
           <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? 'Processing...' : (isLogin ? 'Login' : 'Create Account')}
+            {loading ? 'Processing...' : (isLogin ? 'Enter Casino' : 'Create Account')}
           </button>
         </form>
 
-        <div className="demo-hint">
-          Guess three numbers from 1 - 9, every guess wins!
+        <div className="auth-features">
+          <span>Lucky Triple</span>
+          <span>Spin the Bottle</span>
+          <span>More coming soon</span>
         </div>
       </motion.div>
     </div>

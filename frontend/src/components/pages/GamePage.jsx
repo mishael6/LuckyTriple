@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { API } from '../../api-helper';
 import { GameView } from '../ui/Game';
 import { SpinView } from '../ui/SpinView';
 import { BankView } from '../ui/Bank';
-
-// ============================================================================
-// GAME PAGE
-// ============================================================================
+import { CasinoLobby } from '../ui/CasinoLobby';
+import { CasinoBackground } from '../ui/CasinoBackground';
 
 export const GamePage = ({ user, onLogout, onUpdateUser }) => {
-  const [view, setView] = useState('game');
+  const [view, setView] = useState('lobby');
   const [guesses, setGuesses] = useState(['', '', '']);
   const [bet, setBet] = useState(10);
   const [result, setResult] = useState(null);
@@ -80,102 +78,118 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
     setGuesses(['', '', '']);
   };
 
+  const handleSelectGame = (gameId) => {
+    setView(gameId);
+    if (gameId === 'lucky-triple') {
+      setResult(null);
+      setGuesses(['', '', '']);
+    }
+  };
+
+  const isInGame = view === 'lucky-triple' || view === 'spin';
+
   if (!user) {
     return <div className="loading-screen">Loading user data...</div>;
   }
 
   return (
     <div className="game-container">
+      <CasinoBackground />
+
       <nav className="top-nav">
         <div className="nav-left">
-          <h2>🎰 Lucky Triple</h2>
+          <button type="button" className="brand-btn" onClick={() => setView('lobby')}>
+            <span className="brand-btn__mark">LT</span>
+            <span className="brand-btn__text">Lucky Triple Casino</span>
+          </button>
         </div>
+
         <div className="nav-center">
           <button
-            className={(view === 'game' || view === 'spin') ? 'active' : ''}
-            onClick={() => setView(view === 'spin' ? 'spin' : 'game')}
+            type="button"
+            className={view === 'lobby' ? 'active' : ''}
+            onClick={() => setView('lobby')}
           >
-            🎮 Games
+            Lobby
           </button>
           <button
+            type="button"
             className={view === 'bank' ? 'active' : ''}
             onClick={() => setView('bank')}
           >
-            🏦 Bank
+            Wallet
           </button>
         </div>
+
         <div className="nav-right">
           <div className="balance-display">
             <span className="balance-label">Balance</span>
             <span className="balance-amount">GHS {user?.balance?.toFixed(2) || '0.00'}</span>
           </div>
-          <button onClick={onLogout} className="logout-btn">Logout</button>
+          <button type="button" onClick={onLogout} className="logout-btn">Logout</button>
         </div>
       </nav>
 
-      {/* Sub-nav for games */}
-      {(view === 'game' || view === 'spin') && (
-        <div className="game-tabs" style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '15px' }}>
-          <button
-            onClick={() => setView('game')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              border: 'none',
-              background: view === 'game' ? '#FFC107' : '#333',
-              color: view === 'game' ? '#000' : '#fff',
-              cursor: 'pointer'
-            }}
-          >
-            🔢 Lucky Triple
+      {isInGame && (
+        <motion.div
+          className="game-breadcrumb"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <button type="button" onClick={() => setView('lobby')} className="game-breadcrumb__back">
+            Back to lobby
           </button>
-          <button
-            onClick={() => setView('spin')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              border: 'none',
-              background: view === 'spin' ? '#FFC107' : '#333',
-              color: view === 'spin' ? '#000' : '#fff',
-              cursor: 'pointer'
-            }}
-          >
-            🍾 Spin the Bottle
-          </button>
-        </div>
+          <span className="game-breadcrumb__current">
+            {view === 'lucky-triple' ? 'Lucky Triple' : 'Spin the Bottle'}
+          </span>
+        </motion.div>
       )}
 
-      <AnimatePresence mode="wait">
-        {view === 'game' ? (
-          <GameView
-            key="game"
-            guesses={guesses}
-            bet={bet}
-            result={result}
-            playing={playing}
-            showCelebration={showCelebration}
-            gameSettings={gameSettings}
-            onGuessChange={handleGuessChange}
-            onBetChange={setBet}
-            onPlay={handlePlay}
-            onPlayAgain={handlePlayAgain}
-            userBalance={user.balance || 0}
-          />
-        ) : view === 'spin' ? (
-          <SpinView
-            key="spin"
-            userBalance={user.balance || 0}
-            gameSettings={gameSettings}
-            onUpdateUser={onUpdateUser}
-          />
-        ) : (
-          <BankView
-            key="bank"
-            user={user}
-            onUpdateUser={onUpdateUser}
-          />
-        )}
-      </AnimatePresence>
+      <main className="game-main">
+        <AnimatePresence mode="wait">
+          {view === 'lobby' && (
+            <CasinoLobby
+              key="lobby"
+              onSelectGame={handleSelectGame}
+              gameSettings={gameSettings}
+            />
+          )}
+
+          {view === 'lucky-triple' && (
+            <GameView
+              key="game"
+              guesses={guesses}
+              bet={bet}
+              result={result}
+              playing={playing}
+              showCelebration={showCelebration}
+              gameSettings={gameSettings}
+              onGuessChange={handleGuessChange}
+              onBetChange={setBet}
+              onPlay={handlePlay}
+              onPlayAgain={handlePlayAgain}
+              userBalance={user.balance || 0}
+            />
+          )}
+
+          {view === 'spin' && (
+            <SpinView
+              key="spin"
+              userBalance={user.balance || 0}
+              gameSettings={gameSettings}
+              onUpdateUser={onUpdateUser}
+            />
+          )}
+
+          {view === 'bank' && (
+            <BankView
+              key="bank"
+              user={user}
+              onUpdateUser={onUpdateUser}
+            />
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   );
 };

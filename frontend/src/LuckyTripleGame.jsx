@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthPage } from './components/pages/AuthPage';
 import { GamePage } from './components/pages/GamePage';
 import { AdminDashboard } from './components/admin/Dashboard';
+import { LoadingScreen } from './components/ui/LoadingScreen';
 import { API } from './api-helper';
 
 // ============================================================================
@@ -45,7 +46,7 @@ export default function LuckyTripleGame() {
   };
 
   if (loading) {
-    return <div className="loading-screen">Loading...</div>;
+    return <LoadingScreen label="Preparing your casino..." />;
   }
 
   if (!user) {

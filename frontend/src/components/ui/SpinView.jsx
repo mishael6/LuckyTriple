@@ -62,8 +62,11 @@ export const SpinView = ({
     return (
         <motion.div
             className="game-view spin-game"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.35 }}
+        >
             exit={{ opacity: 0 }}
         >
             <div className="game-card">
