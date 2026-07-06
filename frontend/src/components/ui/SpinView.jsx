@@ -67,8 +67,6 @@ export const SpinView = ({
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.35 }}
         >
-            exit={{ opacity: 0 }}
-        >
             <div className="game-card">
                 <h3>🍾 Spin the Bottle</h3>
                 <p className="game-subtitle">Predict where the bottle will point!</p>
