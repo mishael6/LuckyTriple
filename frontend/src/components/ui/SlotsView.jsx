@@ -1,18 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API } from '../../api-helper';
-import { GameArt } from './GameArt';
-import { GAME_IMAGES } from '../../assets/gameAssets';
 
-export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
+const SLOT_SYMBOLS = [
+  { value: '🍒', label: 'Cherry' },
+  { value: '🍋', label: 'Lemon' },
+  { value: '🔔', label: 'Bell' },
+  { value: '💎', label: 'Diamond' },
+  { value: '7️⃣', label: 'Lucky 7' },
+];
+
+export const SlotsView = ({ userBalance, gameSettings, onUpdateUser, onRefreshSettings }) => {
   const [bet, setBet] = useState(gameSettings?.minBet || 10);
+  const [symbol, setSymbol] = useState('🍒');
+  const [multiplier, setMultiplier] = useState(2);
   const [spinning, setSpinning] = useState(false);
   const [reels, setReels] = useState(['🎰', '🎰', '🎰']);
   const [result, setResult] = useState(null);
 
+  useEffect(() => {
+    onRefreshSettings?.();
+  }, []);
+
   const handleSpin = async () => {
-    if (bet < (gameSettings?.minBet || 1)) {
-      alert(`Minimum bet is GHS ${gameSettings?.minBet || 1}`);
+    const minBet = gameSettings?.minBet || 1;
+    if (bet < minBet) {
+      alert(`Minimum bet is GHS ${minBet}`);
       return;
     }
     if (userBalance < bet) {
@@ -23,19 +36,19 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
     setSpinning(true);
     setResult(null);
 
-    const spinSymbols = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
-    const interval = setInterval(() => {
+    const spinInterval = setInterval(() => {
       setReels([
-        spinSymbols[Math.floor(Math.random() * spinSymbols.length)],
-        spinSymbols[Math.floor(Math.random() * spinSymbols.length)],
-        spinSymbols[Math.floor(Math.random() * spinSymbols.length)],
+        SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)].value,
+        SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)].value,
+        SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)].value,
       ]);
     }, 80);
 
     try {
-      await new Promise((r) => setTimeout(r, 1800));
-      const gameResult = await API.playSlotsGame(bet);
-      clearInterval(interval);
+      await onRefreshSettings?.();
+      const gameResult = await API.playSlotsGame(bet, symbol, multiplier);
+      await new Promise((r) => setTimeout(r, 2000));
+      clearInterval(spinInterval);
 
       if (gameResult.success) {
         setReels(gameResult.reels);
@@ -43,7 +56,7 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
         onUpdateUser({ balance: gameResult.newBalance, profit: gameResult.profit });
       }
     } catch (error) {
-      clearInterval(interval);
+      clearInterval(spinInterval);
       alert(error.response?.data?.error || 'Slots error occurred');
     } finally {
       setSpinning(false);
@@ -53,6 +66,10 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
   if (!gameSettings) {
     return <div className="game-view"><div className="loading">Loading slots...</div></div>;
   }
+
+  const minBet = gameSettings.minBet || 1;
+  const maxBet = gameSettings.maxBet || 1000;
+  const potentialWin = (bet * multiplier).toFixed(2);
 
   return (
     <motion.div
@@ -64,47 +81,39 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
     >
       <div className="game-card">
         <div className="game-card__header-art">
-          <GameArt src={GAME_IMAGES.slots} alt="Lucky Slots" size="card" />
+          <span className="game-card__emoji">🎰</span>
           <div>
             <h3>Lucky Slots</h3>
-            <p className="game-subtitle">Spin the reels and hit the jackpot!</p>
+            <p className="game-subtitle">Pick your symbol, choose a multiplier, then spin!</p>
           </div>
         </div>
-
-        <motion.div
-          animate={spinning ? { scale: [1, 1.04, 1], rotate: [0, 2, -2, 0] } : {}}
-          transition={{ duration: 0.8, repeat: spinning ? Infinity : 0 }}
-        >
-          <GameArt src={GAME_IMAGES.slots} alt="Slot machine" size="hero" visual="slots" spinning={spinning} />
-        </motion.div>
 
         <div className="slots-machine">
           <div className="slots-machine__lights">✨ 💫 ✨</div>
           <div className="slots-reels">
-            {reels.map((symbol, i) => (
+            {reels.map((sym, i) => (
               <motion.div
                 key={i}
                 className={`slots-reel ${spinning ? 'slots-reel--spinning' : ''}`}
-                animate={spinning ? { y: [0, -8, 0] } : {}}
-                transition={{ duration: 0.15, repeat: spinning ? Infinity : 0, delay: i * 0.05 }}
+                animate={spinning ? { y: [0, -10, 0] } : {}}
+                transition={{ duration: 0.12, repeat: spinning ? Infinity : 0, delay: i * 0.05 }}
               >
-                <span className="slots-reel__symbol">{symbol}</span>
+                <span className="slots-reel__symbol">{sym}</span>
               </motion.div>
             ))}
           </div>
-          <div className="slots-machine__handle">🎲</div>
         </div>
 
         <AnimatePresence>
-          {result && (
+          {result && !spinning && (
             <motion.div
               className={`result-message ${result.won ? 'win' : 'lose'}`}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
             >
               {result.won
-                ? `🎉 ${result.winTier === 'jackpot' ? 'JACKPOT!' : 'Winner!'} +GHS ${result.winAmount.toFixed(2)} (${result.multiplier}x)`
-                : `😔 No match — lost GHS ${Math.abs(result.profit).toFixed(2)}`}
+                ? `🎉 MATCH! ${symbol}${symbol}${symbol} — +GHS ${result.winAmount.toFixed(2)} (×${multiplier})`
+                : `😔 No triple ${symbol} — lost GHS ${Math.abs(result.profit).toFixed(2)}`}
               {result.newBalance !== undefined && (
                 <div className="new-balance-display">Balance: GHS {Number(result.newBalance).toFixed(2)}</div>
               )}
@@ -112,31 +121,66 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
           )}
         </AnimatePresence>
 
-        <div className="slots-payouts">
-          <span>💎 Jackpot {gameSettings.slotsPayouts?.jackpot || 50}x</span>
-          <span>🔔 3-of-kind {gameSettings.slotsPayouts?.threeOfKind || 10}x</span>
-          <span>🍒 2-of-kind {gameSettings.slotsPayouts?.twoOfKind || 2}x</span>
-        </div>
-
-        <div className="bet-section">
-          <label>Your Bet (GHS)</label>
-          <div className="bet-controls">
-            <button type="button" onClick={() => setBet(Math.max(gameSettings.minBet, bet - 10))} disabled={spinning}>-10</button>
-            <input
-              type="number"
-              value={bet}
-              onChange={(e) => setBet(parseFloat(e.target.value) || gameSettings.minBet)}
-              min={gameSettings.minBet}
-              max={gameSettings.maxBet}
-              disabled={spinning}
-            />
-            <button type="button" onClick={() => setBet(Math.min(gameSettings.maxBet, bet + 10))} disabled={spinning}>+10</button>
+        <div className="spin-controls" style={{ opacity: spinning ? 0.6 : 1, pointerEvents: spinning ? 'none' : 'auto' }}>
+          <div className="control-group control-group--pick">
+            <label>1. Pick Your Symbol</label>
+            <div className="button-group slots-symbol-grid">
+              {SLOT_SYMBOLS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={`selection-btn pick-btn slots-symbol-btn ${symbol === item.value ? 'active pick-slots' : ''}`}
+                  onClick={() => setSymbol(item.value)}
+                >
+                  <span className="btn-icon">{item.value}</span>
+                  <span className="btn-label">{item.label}</span>
+                  {symbol === item.value && <span className="pick-check">✓</span>}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <button type="button" className="play-btn slots-spin-btn" onClick={handleSpin} disabled={spinning}>
-          {spinning ? '🎰 Spinning...' : '🎰 SPIN!'}
-        </button>
+          <div className="control-group">
+            <label>2. Choose Multiplier</label>
+            <div className="button-group">
+              {[2, 3, 4].map((mult) => (
+                <button
+                  key={mult}
+                  type="button"
+                  className={`selection-btn mult-btn ${multiplier === mult ? 'active pick-mult' : ''}`}
+                  onClick={() => setMultiplier(mult)}
+                >
+                  <span className="btn-icon">×{mult}</span>
+                  {multiplier === mult && <span className="pick-check">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bet-section">
+            <label>3. Bet Amount (GHS)</label>
+            <div className="bet-controls">
+              <button type="button" onClick={() => setBet(Math.max(minBet, bet - 10))} disabled={spinning}>-10</button>
+              <input
+                type="number"
+                value={bet}
+                onChange={(e) => setBet(Math.max(minBet, Math.min(maxBet, parseFloat(e.target.value) || minBet)))}
+                min={minBet}
+                max={maxBet}
+                disabled={spinning}
+              />
+              <button type="button" onClick={() => setBet(Math.min(maxBet, userBalance, bet + 10))} disabled={spinning}>+10</button>
+            </div>
+          </div>
+
+          <div className="potential-win">
+            Bet GHS {Number(bet).toFixed(2)} × {multiplier} = <strong>GHS {potentialWin}</strong> if you hit 3× {symbol}
+          </div>
+
+          <button type="button" className="play-btn slots-spin-btn" onClick={handleSpin} disabled={spinning}>
+            {spinning ? '🎰 Spinning...' : '🎰 SPIN!'}
+          </button>
+        </div>
       </div>
     </motion.div>
   );

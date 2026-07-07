@@ -111,8 +111,8 @@ export const API = {
     return response.data;
   },
 
-  playSlotsGame: async (bet) => {
-    const response = await axios.post('/game/slots', { bet });
+  playSlotsGame: async (bet, symbol, multiplier) => {
+    const response = await axios.post('/game/slots', { bet, symbol, multiplier });
     return response.data;
   },
 

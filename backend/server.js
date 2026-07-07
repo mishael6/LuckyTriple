@@ -323,6 +323,7 @@ const slotsGameHistorySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   betAmount: { type: Number, required: true },
   reels: [{ type: String }],
+  chosenSymbol: { type: String },
   winTier: { type: String, enum: ['jackpot', 'bigWin', 'smallWin', 'none'], default: 'none' },
   multiplier: { type: Number, default: 0 },
   won: { type: Boolean, default: false },
@@ -418,6 +419,11 @@ const gameSettingsSchema = new mongoose.Schema({
     bigWin: { type: Number, default: 15 },
     smallWin: { type: Number, default: 35 }
   },
+  slotsMultiplierWinChances: {
+    x2: { type: Number, default: 45 },
+    x3: { type: Number, default: 30 },
+    x4: { type: Number, default: 20 }
+  },
   slotsPayouts: {
     jackpot: { type: Number, default: 50 },
     threeOfKind: { type: Number, default: 10 },
@@ -449,9 +455,9 @@ const MULTI_CHANCE_MED = { x2: 45, x3: 30, x4: 20 };
 const MULTI_CHANCE_HARD = { x2: 35, x3: 22, x4: 12 };
 
 const DIFFICULTY_PRESETS = {
-  easy: { triple: { threeMatch: 8, twoMatch: 32, oneMatch: 35, zeroMatch: 25 }, spin: MULTI_CHANCE_EASY, slots: { jackpot: 5, bigWin: 22, smallWin: 45 }, roulette: MULTI_CHANCE_EASY, coin: MULTI_CHANCE_EASY, dice: MULTI_CHANCE_EASY },
-  medium: { triple: { threeMatch: 5, twoMatch: 25, oneMatch: 30, zeroMatch: 40 }, spin: MULTI_CHANCE_MED, slots: { jackpot: 3, bigWin: 15, smallWin: 35 }, roulette: MULTI_CHANCE_MED, coin: MULTI_CHANCE_MED, dice: MULTI_CHANCE_MED },
-  hard: { triple: { threeMatch: 2, twoMatch: 15, oneMatch: 23, zeroMatch: 60 }, spin: MULTI_CHANCE_HARD, slots: { jackpot: 1, bigWin: 8, smallWin: 22 }, roulette: MULTI_CHANCE_HARD, coin: MULTI_CHANCE_HARD, dice: MULTI_CHANCE_HARD }
+  easy: { triple: { threeMatch: 8, twoMatch: 32, oneMatch: 35, zeroMatch: 25 }, spin: MULTI_CHANCE_EASY, slots: { jackpot: 5, bigWin: 22, smallWin: 45 }, slotsMultiplier: MULTI_CHANCE_EASY, roulette: MULTI_CHANCE_EASY, coin: MULTI_CHANCE_EASY, dice: MULTI_CHANCE_EASY },
+  medium: { triple: { threeMatch: 5, twoMatch: 25, oneMatch: 30, zeroMatch: 40 }, spin: MULTI_CHANCE_MED, slots: { jackpot: 3, bigWin: 15, smallWin: 35 }, slotsMultiplier: MULTI_CHANCE_MED, roulette: MULTI_CHANCE_MED, coin: MULTI_CHANCE_MED, dice: MULTI_CHANCE_MED },
+  hard: { triple: { threeMatch: 2, twoMatch: 15, oneMatch: 23, zeroMatch: 60 }, spin: MULTI_CHANCE_HARD, slots: { jackpot: 1, bigWin: 8, smallWin: 22 }, slotsMultiplier: MULTI_CHANCE_HARD, roulette: MULTI_CHANCE_HARD, coin: MULTI_CHANCE_HARD, dice: MULTI_CHANCE_HARD }
 };
 
 const CHOICE_OPPOSITES = {
@@ -542,6 +548,37 @@ const generateTripleOutcome = (playerGuesses, chances) => {
   }
 
   return { winningNumbers, targetMatches };
+};
+
+const generateSlotReelsForSymbol = (symbol, won) => {
+  if (won) return [symbol, symbol, symbol];
+  const reels = [];
+  while (reels.length < 3) reels.push(pickRandom(SLOT_SYMBOLS));
+  if (reels.every((r) => r === symbol)) {
+    reels[2] = pickRandom(SLOT_SYMBOLS.filter((s) => s !== symbol));
+  }
+  return reels;
+};
+
+const rollDiceForOutcome = (outcome) => {
+  const targetSum = outcome === 'high'
+    ? Math.floor(Math.random() * 6) + 7
+    : Math.floor(Math.random() * 5) + 2;
+  let d1 = Math.min(6, Math.max(1, Math.floor(targetSum / 2)));
+  let d2 = targetSum - d1;
+  if (d2 < 1) { d2 = 1; d1 = targetSum - 1; }
+  if (d2 > 6) { d2 = 6; d1 = targetSum - 6; }
+  if (outcome === 'high' && d1 + d2 < 7) {
+    d1 = Math.floor(Math.random() * 3) + 4;
+    d2 = Math.floor(Math.random() * 3) + 1;
+    if (d1 + d2 < 7) d2 = 7 - d1;
+  }
+  if (outcome === 'low' && d1 + d2 > 6) {
+    d1 = Math.floor(Math.random() * 3) + 1;
+    d2 = Math.floor(Math.random() * 3) + 1;
+    if (d1 + d2 > 6) d2 = Math.max(1, 6 - d1);
+  }
+  return [d1, d2];
 };
 
 const generateSlotReels = (tier) => {
@@ -1200,11 +1237,14 @@ app.get('/api/game/spin-history', authenticateToken, async (req, res) => {
 // Play Lucky Slots
 app.post('/api/game/slots', authenticateToken, async (req, res) => {
   try {
-    const { bet } = req.body;
+    const { bet, symbol, multiplier } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!bet || bet <= 0) {
       return res.status(400).json({ success: false, error: 'Invalid bet amount' });
+    }
+    if (!SLOT_SYMBOLS.includes(symbol) || ![2, 3, 4].includes(Number(multiplier))) {
+      return res.status(400).json({ success: false, error: 'Pick a symbol and multiplier (x2, x3, or x4)' });
     }
 
     let settings = await GameSettings.findOne();
@@ -1222,36 +1262,20 @@ app.post('/api/game/slots', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
-    const chances = settings.slotsWinChances || DIFFICULTY_PRESETS.medium.slots;
-    const payouts = settings.slotsPayouts || { jackpot: 50, threeOfKind: 10, twoOfKind: 2 };
-    const roll = Math.random() * 100;
-
-    let winTier = 'none';
-    let multiplier = 0;
-    if (roll < (chances.jackpot || 3)) {
-      winTier = 'jackpot';
-      multiplier = payouts.jackpot || 50;
-    } else if (roll < (chances.jackpot || 3) + (chances.bigWin || 15)) {
-      winTier = 'bigWin';
-      multiplier = payouts.threeOfKind || 10;
-    } else if (roll < (chances.jackpot || 3) + (chances.bigWin || 15) + (chances.smallWin || 35)) {
-      winTier = 'smallWin';
-      multiplier = payouts.twoOfKind || 2;
-    }
-
-    const reels = generateSlotReels(winTier);
-    const won = winTier !== 'none';
-    const winAmount = won ? bet * multiplier : 0;
-    const profit = winAmount - bet;
+    const winChances = settings.slotsMultiplierWinChances || MULTI_CHANCE_MED;
+    const won = Math.random() * 100 <= (winChances[`x${multiplier}`] ?? 45);
+    const reels = generateSlotReelsForSymbol(symbol, won);
+    const { winAmount, profit } = calcMultiplierPayout(bet, Number(multiplier), won);
 
     const history = new SlotsGameHistory({
       userId: user._id,
       betAmount: bet,
       reels,
-      winTier,
-      multiplier,
+      winTier: won ? 'jackpot' : 'none',
+      multiplier: Number(multiplier),
       won,
-      profit
+      profit,
+      chosenSymbol: symbol
     });
 
     const newBalance = await processGamePayout(user, bet, profit, winAmount, history, 'Lucky Slots');
@@ -1259,8 +1283,8 @@ app.post('/api/game/slots', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       reels,
-      winTier,
-      multiplier,
+      symbol,
+      multiplier: Number(multiplier),
       won,
       winAmount,
       profit,
@@ -1365,10 +1389,8 @@ app.post('/api/game/dice', authenticateToken, async (req, res) => {
       HistoryModel: DiceGameHistory,
       gameName: 'Dice Duel',
       extraFields: (won, outcome) => {
-        const diceRoll = outcome === 'high'
-          ? Math.floor(Math.random() * 3) + 4
-          : Math.floor(Math.random() * 3) + 1;
-        return { diceRoll };
+        const diceRolls = rollDiceForOutcome(outcome);
+        return { diceRolls, diceRoll: diceRolls[0] + diceRolls[1] };
       }
     });
 
@@ -1736,7 +1758,7 @@ app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req,
     const {
       houseFee, maxBet, minBet, difficulty, gamesEnabled,
       payoutMultipliers, tripleWinChances, spinWinChances,
-      slotsWinChances, slotsPayouts, rouletteWinChances, coinWinChances, diceWinChances,
+      slotsWinChances, slotsMultiplierWinChances, slotsPayouts, rouletteWinChances, coinWinChances, diceWinChances,
       applyDifficultyPreset
     } = req.body;
 
@@ -1752,6 +1774,7 @@ app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req,
     if (tripleWinChances) settings.tripleWinChances = { ...settings.tripleWinChances?.toObject?.() || settings.tripleWinChances || {}, ...tripleWinChances };
     if (spinWinChances) settings.spinWinChances = { ...settings.spinWinChances?.toObject?.() || settings.spinWinChances || {}, ...spinWinChances };
     if (slotsWinChances) settings.slotsWinChances = { ...settings.slotsWinChances?.toObject?.() || settings.slotsWinChances || {}, ...slotsWinChances };
+    if (slotsMultiplierWinChances) settings.slotsMultiplierWinChances = { ...settings.slotsMultiplierWinChances?.toObject?.() || settings.slotsMultiplierWinChances || {}, ...slotsMultiplierWinChances };
     if (slotsPayouts) settings.slotsPayouts = { ...settings.slotsPayouts?.toObject?.() || settings.slotsPayouts || {}, ...slotsPayouts };
     if (rouletteWinChances) settings.rouletteWinChances = { ...settings.rouletteWinChances?.toObject?.() || settings.rouletteWinChances || {}, ...rouletteWinChances };
     if (coinWinChances) settings.coinWinChances = { ...settings.coinWinChances?.toObject?.() || settings.coinWinChances || {}, ...coinWinChances };
@@ -1763,6 +1786,7 @@ app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req,
       settings.tripleWinChances = preset.triple;
       settings.spinWinChances = preset.spin;
       settings.slotsWinChances = preset.slots;
+      settings.slotsMultiplierWinChances = preset.slotsMultiplier;
       settings.rouletteWinChances = preset.roulette;
       settings.coinWinChances = preset.coin;
       settings.diceWinChances = preset.dice;

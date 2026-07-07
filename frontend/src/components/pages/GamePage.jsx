@@ -157,6 +157,7 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
 
   const openGame = (gameId) => {
     setView(gameId);
+    loadGameSettings();
     if (gameId === 'lucky-triple') {
       setResult(null);
       setGuesses(['', '', '']);
@@ -267,11 +268,19 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
               userBalance={user.balance || 0}
               gameSettings={gameSettings}
               onUpdateUser={handleGameUpdateUser}
+              onPlay={predictionConfig.play}
+              onRefreshSettings={loadGameSettings}
             />
           )}
 
           {view === 'slots' && (
-            <SlotsView key="slots" userBalance={user.balance || 0} gameSettings={gameSettings} onUpdateUser={handleGameUpdateUser} />
+            <SlotsView
+              key="slots"
+              userBalance={user.balance || 0}
+              gameSettings={gameSettings}
+              onUpdateUser={handleGameUpdateUser}
+              onRefreshSettings={loadGameSettings}
+            />
           )}
 
           {view === 'bank' && (

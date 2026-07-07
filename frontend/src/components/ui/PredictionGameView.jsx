@@ -1,17 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GameArt } from './GameArt';
-
-const OPPOSITE = {
-  up: 'bottom',
-  bottom: 'up',
-  red: 'black',
-  black: 'red',
-  heads: 'tails',
-  tails: 'heads',
-  high: 'low',
-  low: 'high',
-};
+import { GameVisual } from './GameVisuals';
 
 const OUTCOME_LABELS = {
   up: '⬆️ UP',
@@ -24,11 +13,28 @@ const OUTCOME_LABELS = {
   low: '📉 LOW',
 };
 
+const CHOICE_ACTIVE_CLASS = {
+  up: 'pick-up',
+  bottom: 'pick-bottom',
+  red: 'pick-red',
+  black: 'pick-black',
+  heads: 'pick-heads',
+  tails: 'pick-tails',
+  high: 'pick-high',
+  low: 'pick-low',
+};
+
+const ANIM_DURATION_MS = {
+  bottle: 2200,
+  wheel: 2800,
+  coin: 2000,
+  dice: 1800,
+};
+
 export const PredictionGameView = ({
   title,
   subtitle,
   emoji,
-  imageSrc,
   visual = 'bottle',
   choiceA,
   choiceB,
@@ -36,6 +42,7 @@ export const PredictionGameView = ({
   gameSettings,
   onUpdateUser,
   onPlay,
+  onRefreshSettings,
   playLabel = 'PLAY',
 }) => {
   const [bet, setBet] = useState(gameSettings?.minBet || 10);
@@ -44,7 +51,19 @@ export const PredictionGameView = ({
   const [playing, setPlaying] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
-  const [extra, setExtra] = useState(null);
+  const [displayDice, setDisplayDice] = useState([1, 1]);
+  const [rouletteIdle, setRouletteIdle] = useState(visual === 'wheel');
+
+  useEffect(() => {
+    if (gameSettings?.minBet) setBet((b) => Math.max(gameSettings.minBet, b));
+  }, [gameSettings?.minBet]);
+
+  useEffect(() => {
+    setRouletteIdle(visual === 'wheel');
+    setResult(null);
+    setDisplayDice([1, 1]);
+    onRefreshSettings?.();
+  }, [visual]);
 
   const handlePlay = async () => {
     const minBet = gameSettings?.minBet || 1;
@@ -58,19 +77,53 @@ export const PredictionGameView = ({
       alert('Insufficient balance. Please deposit funds.');
       return;
     }
+    if (!onPlay) {
+      alert('Game is not configured correctly. Please refresh.');
+      return;
+    }
 
     setPlaying(true);
     setSpinning(true);
     setResult(null);
-    setExtra(null);
+    setRouletteIdle(false);
+
+    if (visual === 'dice') {
+      const rollInterval = setInterval(() => {
+        setDisplayDice([
+          Math.floor(Math.random() * 6) + 1,
+          Math.floor(Math.random() * 6) + 1,
+        ]);
+      }, 90);
+      try {
+        await onRefreshSettings?.();
+        const gameResult = await onPlay(bet, choice, multiplier);
+        if (gameResult.success) {
+          const rolls = gameResult.diceRolls || [gameResult.diceRoll || 1, gameResult.diceRoll || 1];
+          setResult(gameResult);
+          await new Promise((r) => setTimeout(r, ANIM_DURATION_MS.dice));
+          clearInterval(rollInterval);
+          setDisplayDice(rolls);
+          if (onUpdateUser) onUpdateUser({ balance: gameResult.newBalance, profit: gameResult.profit });
+        } else {
+          clearInterval(rollInterval);
+        }
+      } catch (error) {
+        clearInterval(rollInterval);
+        alert(error.response?.data?.error || 'Game error occurred');
+      } finally {
+        setSpinning(false);
+        setPlaying(false);
+      }
+      return;
+    }
 
     try {
-      await new Promise((r) => setTimeout(r, 1500));
+      await onRefreshSettings?.();
       const gameResult = await onPlay(bet, choice, multiplier);
 
       if (gameResult.success) {
         setResult(gameResult);
-        setExtra(gameResult.diceRoll ?? null);
+        await new Promise((r) => setTimeout(r, ANIM_DURATION_MS[visual] || 2000));
         if (onUpdateUser) {
           onUpdateUser({ balance: gameResult.newBalance, profit: gameResult.profit });
         }
@@ -80,6 +133,7 @@ export const PredictionGameView = ({
     } finally {
       setSpinning(false);
       setPlaying(false);
+      if (visual === 'wheel') setRouletteIdle(true);
     }
   };
 
@@ -90,14 +144,7 @@ export const PredictionGameView = ({
   const minBet = gameSettings.minBet || 1;
   const maxBet = gameSettings.maxBet || 1000;
   const potentialWin = (bet * multiplier).toFixed(2);
-
-  const bottleRotation = spinning
-    ? 1440
-    : result
-      ? result.outcome === 'up' ? 0 : result.outcome === 'bottom' ? 180 : 0
-      : 0;
-
-  const wheelRotation = spinning ? 1440 + Math.random() * 360 : result ? 720 : 0;
+  const pickClass = (value) => CHOICE_ACTIVE_CLASS[value] || 'pick-default';
 
   return (
     <motion.div
@@ -109,7 +156,7 @@ export const PredictionGameView = ({
     >
       <div className="game-card">
         <div className="game-card__header-art">
-          <GameArt src={imageSrc} alt={title} size="card" visual={visual} />
+          <span className="game-card__emoji">{emoji}</span>
           <div>
             <h3>{title}</h3>
             <p className="game-subtitle">{subtitle}</p>
@@ -117,41 +164,29 @@ export const PredictionGameView = ({
         </div>
 
         <div className="prediction-visual">
-          <motion.div
-            className="prediction-visual__frame"
-            animate={
-              spinning
-                ? visual === 'wheel'
-                  ? { rotate: wheelRotation }
-                  : visual === 'bottle'
-                    ? { rotate: bottleRotation }
-                    : visual === 'coin'
-                      ? { rotateY: [0, 360, 720] }
-                      : { rotate: [0, 15, -15, 0], scale: [1, 1.08, 1] }
-                : { rotate: 0, rotateY: 0, scale: 1 }
-            }
-            transition={{
-              duration: spinning ? (visual === 'wheel' ? 2 : 1.5) : 0.5,
-              ease: spinning ? 'easeOut' : 'linear',
-              repeat: spinning && visual !== 'wheel' && visual !== 'bottle' ? Infinity : 0,
-            }}
-          >
-            <GameArt src={imageSrc} alt={title} size="hero" visual={visual} spinning={spinning} />
-          </motion.div>
+          <GameVisual
+            type={visual}
+            spinning={spinning}
+            outcome={result?.outcome}
+            idleSpin={rouletteIdle}
+            diceRolls={displayDice}
+          />
         </div>
 
         <AnimatePresence>
-          {result && !spinning && (
+          {result && (
             <motion.div
               className={`result-message ${result.won ? 'win' : 'lose'}`}
               initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              animate={{ scale: 1, opacity: spinning ? 0.6 : 1 }}
               style={{ marginBottom: '20px' }}
             >
               {result.won
                 ? `🎉 WIN! ${OUTCOME_LABELS[result.outcome] || result.outcome} — +GHS ${Number(result.profit).toFixed(2)} (won GHS ${Number(result.winAmount).toFixed(2)})`
                 : `😔 LOST! Landed ${OUTCOME_LABELS[result.outcome] || result.outcome} — -GHS ${Math.abs(Number(result.profit)).toFixed(2)}`}
-              {extra && visual === 'dice' && <div className="dice-roll-label">Rolled: {extra}</div>}
+              {visual === 'dice' && displayDice.length === 2 && (
+                <div className="dice-roll-label">Rolled: {displayDice[0]} + {displayDice[1]} = {displayDice[0] + displayDice[1]}</div>
+              )}
               {result.newBalance !== undefined && (
                 <div className="new-balance-display">Balance: GHS {Number(result.newBalance).toFixed(2)}</div>
               )}
@@ -159,23 +194,27 @@ export const PredictionGameView = ({
           )}
         </AnimatePresence>
 
-        <div className="spin-controls" style={{ opacity: playing ? 0.5 : 1, pointerEvents: playing ? 'none' : 'auto' }}>
-          <div className="control-group">
+        <div className="spin-controls" style={{ opacity: playing ? 0.6 : 1, pointerEvents: playing ? 'none' : 'auto' }}>
+          <div className="control-group control-group--pick">
             <label>1. Make Your Pick</label>
             <div className="button-group">
               <button
                 type="button"
-                className={`selection-btn ${choice === choiceA.value ? 'active' : ''}`}
+                className={`selection-btn pick-btn ${choice === choiceA.value ? `active ${pickClass(choiceA.value)}` : ''}`}
                 onClick={() => setChoice(choiceA.value)}
               >
-                <span className="btn-icon">{choiceA.icon}</span> {choiceA.label}
+                <span className="btn-icon">{choiceA.icon}</span>
+                <span className="btn-label">{choiceA.label}</span>
+                {choice === choiceA.value && <span className="pick-check">✓ SELECTED</span>}
               </button>
               <button
                 type="button"
-                className={`selection-btn ${choice === choiceB.value ? 'active' : ''}`}
+                className={`selection-btn pick-btn ${choice === choiceB.value ? `active ${pickClass(choiceB.value)}` : ''}`}
                 onClick={() => setChoice(choiceB.value)}
               >
-                <span className="btn-icon">{choiceB.icon}</span> {choiceB.label}
+                <span className="btn-icon">{choiceB.icon}</span>
+                <span className="btn-label">{choiceB.label}</span>
+                {choice === choiceB.value && <span className="pick-check">✓ SELECTED</span>}
               </button>
             </div>
           </div>
@@ -187,10 +226,11 @@ export const PredictionGameView = ({
                 <button
                   key={mult}
                   type="button"
-                  className={`selection-btn ${multiplier === mult ? 'active mult-btn' : ''}`}
+                  className={`selection-btn mult-btn ${multiplier === mult ? 'active pick-mult' : ''}`}
                   onClick={() => setMultiplier(mult)}
                 >
-                  <span className="btn-icon">x{mult}</span>
+                  <span className="btn-icon">×{mult}</span>
+                  {multiplier === mult && <span className="pick-check">✓</span>}
                 </button>
               ))}
             </div>

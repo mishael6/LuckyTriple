@@ -1609,11 +1609,431 @@ td {
   box-shadow: 0 4px 15px rgba(255, 61, 0, 0.3);
 }
 
-.selection-btn.active.mult-btn {
+.selection-btn.active.mult-btn,
+.selection-btn.active.pick-mult {
   background: linear-gradient(135deg, #2979FF 0%, #82B1FF 100%);
   border-color: #448AFF;
   color: #000;
   box-shadow: 0 4px 15px rgba(41, 121, 255, 0.3);
+}
+
+/* Enhanced pick visibility */
+.control-group--pick label {
+  color: #ffd700;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.pick-btn.active {
+  transform: scale(1.04);
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.pick-check {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  opacity: 0.95;
+}
+
+.selection-btn.active.pick-up {
+  background: linear-gradient(135deg, #00C853 0%, #B2FF59 100%);
+  border-color: #00E676;
+  color: #000;
+}
+
+.selection-btn.active.pick-bottom {
+  background: linear-gradient(135deg, #FF3D00 0%, #FF9E80 100%);
+  border-color: #FF6E40;
+  color: #000;
+}
+
+.selection-btn.active.pick-red {
+  background: linear-gradient(135deg, #D50000 0%, #FF5252 100%);
+  border-color: #ff1744;
+  color: #fff;
+}
+
+.selection-btn.active.pick-black {
+  background: linear-gradient(135deg, #212121 0%, #616161 100%);
+  border-color: #9e9e9e;
+  color: #fff;
+}
+
+.selection-btn.active.pick-heads {
+  background: linear-gradient(135deg, #FFD700 0%, #FFF59D 100%);
+  border-color: #ffc400;
+  color: #000;
+}
+
+.selection-btn.active.pick-tails {
+  background: linear-gradient(135deg, #7C4DFF 0%, #B388FF 100%);
+  border-color: #651fff;
+  color: #fff;
+}
+
+.selection-btn.active.pick-high {
+  background: linear-gradient(135deg, #00BFA5 0%, #64FFDA 100%);
+  border-color: #1de9b6;
+  color: #000;
+}
+
+.selection-btn.active.pick-low {
+  background: linear-gradient(135deg, #FF6D00 0%, #FFAB40 100%);
+  border-color: #ff9100;
+  color: #000;
+}
+
+.selection-btn.active.pick-slots {
+  background: linear-gradient(135deg, #E91E63 0%, #F48FB1 100%);
+  border-color: #f50057;
+  color: #fff;
+}
+
+.slots-symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.slots-symbol-btn .btn-icon {
+  font-size: 32px;
+}
+
+.game-card__emoji {
+  font-size: 48px;
+  line-height: 1;
+}
+
+/* ============================================================================
+   GAME VISUALS — Bottle, Roulette, Coin, Dice
+   ============================================================================ */
+
+.prediction-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 220px;
+  margin: 16px 0 24px;
+  padding: 20px;
+  background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+  border-radius: 20px;
+}
+
+.game-visual {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Bottle */
+.bottle-visual__spinner {
+  position: relative;
+  width: 80px;
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bottle-visual--spinning .bottle-visual__spinner {
+  animation: bottle-spin 2.2s cubic-bezier(0.15, 0.85, 0.25, 1) forwards;
+}
+
+@keyframes bottle-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(1800deg); }
+}
+
+.bottle-visual__body {
+  width: 56px;
+  height: 140px;
+  margin: 0 auto;
+  background: linear-gradient(90deg, #1b5e20 0%, #43a047 40%, #81c784 55%, #2e7d32 100%);
+  border-radius: 8px 8px 18px 18px;
+  position: relative;
+  box-shadow: inset -8px 0 16px rgba(0,0,0,0.25), 0 12px 24px rgba(0,0,0,0.4);
+}
+
+.bottle-visual__neck {
+  width: 22px;
+  height: 36px;
+  margin: 0 auto;
+  background: linear-gradient(90deg, #1b5e20, #66bb6a, #1b5e20);
+  border-radius: 4px 4px 0 0;
+}
+
+.bottle-visual__cap {
+  width: 28px;
+  height: 14px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #ffd700, #b8860b);
+  border-radius: 4px 4px 2px 2px;
+}
+
+.bottle-visual__label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+}
+
+.bottle-visual--landed .bottle-visual__spinner {
+  animation: none;
+  transition: transform 0.6s ease-out;
+}
+
+.bottle-visual__pointer {
+  text-align: center;
+  color: #ffd700;
+  font-size: 18px;
+  margin-top: 4px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.bottle-visual__floor {
+  width: 100px;
+  height: 8px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  margin-top: 12px;
+}
+
+/* Roulette */
+.roulette-visual {
+  width: 200px;
+  height: 200px;
+}
+
+.roulette-visual__pointer {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 22px solid #ffd700;
+  z-index: 3;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.roulette-visual__wheel-wrap {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 5px solid #ffd700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 12px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.roulette-visual__wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+  background: conic-gradient(#e53935 0deg 180deg, #212121 180deg 360deg);
+  transition: transform 1.2s cubic-bezier(0.12, 0.8, 0.2, 1);
+}
+
+.roulette-visual--landed .roulette-visual__wheel {
+  animation: none;
+}
+
+.roulette-visual__label {
+  position: absolute;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+.roulette-visual__label--red {
+  top: 28%;
+  left: 22%;
+}
+
+.roulette-visual__label--black {
+  top: 58%;
+  right: 18%;
+}
+
+.roulette-visual--idle .roulette-visual__wheel {
+  animation: roulette-idle 4s linear infinite;
+}
+
+.roulette-visual--spinning .roulette-visual__wheel {
+  animation: roulette-spin 2.8s cubic-bezier(0.12, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes roulette-idle {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes roulette-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(2160deg); }
+}
+
+.roulette-visual__hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  background: radial-gradient(circle, #ffd700, #b8860b);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border: 3px solid #fff;
+  z-index: 2;
+}
+
+/* Coin */
+.coin-visual {
+  perspective: 600px;
+  padding: 20px 0;
+}
+
+.coin-visual__coin {
+  width: 120px;
+  height: 120px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease-out;
+}
+
+.coin-visual--flipping .coin-visual__coin {
+  animation: coin-flip 2s ease-in-out forwards;
+}
+
+.coin-visual--tails .coin-visual__coin {
+  transform: rotateY(180deg);
+}
+
+@keyframes coin-flip {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(1980deg); }
+}
+
+.coin-visual__face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid #b8860b;
+  box-shadow: inset 0 -6px 12px rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.coin-visual__face--heads {
+  background: radial-gradient(circle at 35% 35%, #fff9c4, #ffd700 50%, #b8860b);
+  color: #5d4037;
+}
+
+.coin-visual__face--tails {
+  background: radial-gradient(circle at 35% 35%, #e8eaf6, #9fa8da 50%, #5c6bc0);
+  color: #1a237e;
+  transform: rotateY(180deg);
+}
+
+.coin-visual__emblem {
+  font-size: 36px;
+  font-weight: 900;
+}
+
+.coin-visual__text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.coin-visual__shadow {
+  width: 90px;
+  height: 12px;
+  background: rgba(0,0,0,0.35);
+  border-radius: 50%;
+  margin-top: 16px;
+}
+
+/* Dice */
+.dice-visual__pair {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.die {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(145deg, #fff 0%, #f5f5f5 100%);
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35), inset 0 -3px 6px rgba(0,0,0,0.1);
+  border: 2px solid #e0e0e0;
+}
+
+.dice-visual--rolling .die--left {
+  animation: die-shake-left 0.18s ease-in-out infinite;
+}
+
+.dice-visual--rolling .die--right {
+  animation: die-shake-right 0.18s ease-in-out infinite;
+}
+
+@keyframes die-shake-left {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  50% { transform: rotate(8deg) translateY(-6px); }
+}
+
+@keyframes die-shake-right {
+  0%, 100% { transform: rotate(8deg) translateY(0); }
+  50% { transform: rotate(-8deg) translateY(-6px); }
+}
+
+.die-face {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.die-face__dots {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.die-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #212121;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.3);
+}
+
+.dice-visual__sum {
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+.dice-roll-label {
+  margin-top: 8px;
+  font-size: 14px;
+  opacity: 0.9;
 }
 
 .potential-win {

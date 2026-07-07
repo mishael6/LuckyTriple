@@ -112,13 +112,8 @@ export const AdminGameSettings = ({ gameSettings, setGameSettings, onSave }) => 
       </section>
 
       <section className="settings-section">
-        <h4>🎰 Lucky Slots</h4>
-        <SettingInput label="Jackpot %" value={s.slotsWinChances?.jackpot} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'jackpot', v))} max={100} />
-        <SettingInput label="Big Win %" value={s.slotsWinChances?.bigWin} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'bigWin', v))} max={100} />
-        <SettingInput label="Small Win %" value={s.slotsWinChances?.smallWin} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'smallWin', v))} max={100} />
-        <SettingInput label="Jackpot Mult" value={s.slotsPayouts?.jackpot} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'jackpot', v))} />
-        <SettingInput label="3-of-kind Mult" value={s.slotsPayouts?.threeOfKind} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'threeOfKind', v))} />
-        <SettingInput label="2-of-kind Mult" value={s.slotsPayouts?.twoOfKind} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'twoOfKind', v))} />
+        <MultiplierChances title="🎰 Lucky Slots" chancesKey="slotsMultiplierWinChances" s={s} setGameSettings={setGameSettings} />
+        <p className="settings-hint">Player picks a symbol, then multiplier. Win = 3 matching symbols. Payout = bet × multiplier.</p>
       </section>
 
       <button type="button" className="save-settings-btn" onClick={onSave}>💾 Save All Game Settings</button>
