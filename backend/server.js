@@ -69,6 +69,52 @@ const formatGhanaPhone = (phone) => {
   return `+${formattedPhone}`;
 };
 
+const getPaymentsWebhookUrl = () => {
+  const baseUrl = process.env.BACKEND_URL || process.env.BASE_URL || 'https://luckytriple-backend.onrender.com';
+  return `${baseUrl.replace(/\/$/, '')}/api/payments/webhook`;
+};
+
+const payloqaPaymentsAPI = {
+  request: async (path, options = {}) => {
+    const url = `${PAYLOQA_CONFIG.paymentsBaseURL}${path}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': PAYLOQA_CONFIG.apiKey,
+        'X-Platform-Id': PAYLOQA_CONFIG.platformId,
+        ...(options.headers || {}),
+      },
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = { success: false, message: `Invalid response from Payloqa (${response.status})` };
+    }
+
+    return { ok: response.ok, status: response.status, data };
+  },
+
+  createPayment: (payload) => payloqaPaymentsAPI.request('/create', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+
+  verifyOTP: (paymentId, payload) => payloqaPaymentsAPI.request(`/${paymentId}/verify-otp`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+
+  resendOTP: (paymentId, payload) => payloqaPaymentsAPI.request(`/${paymentId}/resend-otp`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+
+  getStatus: (paymentId) => payloqaPaymentsAPI.request(`/${paymentId}`, { method: 'GET' }),
+};
+
 const payloqaAPI = {
   // ============================================================================
   // SMS FUNCTIONS
@@ -780,10 +826,35 @@ app.post('/api/payments/webhook', async (req, res) => {
       }
 
       const numAmount = parseFloat(amount);
-      user.balance = Number(user.balance) + numAmount;
-      await user.save();
+      const paymentRef = req.body.payment_id || req.body.reference || metadata?.order_reference;
 
-      console.log(`✅ Balance updated for ${user.email}: GHS ${user.balance}`);
+      const existing = paymentRef
+        ? await Transaction.findOne({ reference: paymentRef })
+        : null;
+
+      if (!existing) {
+        user.balance = Number(user.balance) + numAmount;
+        await user.save();
+
+        if (paymentRef) {
+          await Transaction.create({
+            userId: user._id,
+            type: 'deposit',
+            amount: numAmount,
+            status: 'completed',
+            processedAt: new Date(),
+            reference: paymentRef,
+            paymentDetails: {
+              phone: user.phone,
+              source: 'webhook',
+            },
+          });
+        }
+
+        console.log(`✅ Balance updated for ${user.email}: GHS ${user.balance}`);
+      } else {
+        console.log(`ℹ️ Deposit already recorded for reference ${paymentRef}`);
+      }
 
       // Send deposit confirmation SMS
       try {
@@ -2635,18 +2706,22 @@ app.post('/api/payments/deposit', authenticateToken, async (req, res) => {
       user.phone = formattedPhone;
     }
 
-    // Check if this payment was already recorded
-    const existing = await Transaction.findOne({ reference });
+    const paymentRef = reference || paymentId;
+    const existing = paymentRef
+      ? await Transaction.findOne({ reference: paymentRef })
+      : null;
+
     if (existing) {
+      const freshUser = await User.findById(req.user.id);
       return res.json({
         success: true,
         message: 'Already recorded',
         user: {
-          _id: user._id,
-          email: user.email,
-          phone: user.phone,
-          balance: user.balance,
-          isAdmin: user.isAdmin,
+          _id: freshUser._id,
+          email: freshUser.email,
+          phone: freshUser.phone,
+          balance: freshUser.balance,
+          isAdmin: freshUser.isAdmin,
         },
       });
     }
@@ -2660,7 +2735,7 @@ app.post('/api/payments/deposit', authenticateToken, async (req, res) => {
       amount: parseFloat(amount),
       status: 'completed',
       processedAt: new Date(),
-      reference: reference || paymentId,
+      reference: paymentRef,
       paymentDetails: formattedPhone || network
         ? { phone: formattedPhone || user.phone, network: network || null }
         : undefined,
@@ -2684,84 +2759,167 @@ app.post('/api/payments/deposit', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
-  await connectToDatabase();
   try {
     const { amount, phone, network } = req.body;
     const user = await User.findById(req.user.id);
+    const formattedPhone = formatGhanaPhone(phone || user?.phone);
+    const paymentNetwork = (network || 'mtn').toLowerCase();
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, error: 'Invalid amount' });
     }
 
-    // Format phone to E.164
-    let formattedPhone = phone.replace(/\s|-/g, '');
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = '+233' + formattedPhone.substring(1);
-    } else if (formattedPhone.startsWith('233')) {
-      formattedPhone = '+' + formattedPhone;
-    } else if (!formattedPhone.startsWith('+')) {
-      formattedPhone = '+233' + formattedPhone;
+    if (!formattedPhone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Enter a valid Ghana phone number (e.g. 024XXXXXXX)',
+      });
     }
 
-    const response = await fetch('https://payments.payloqa.com/api/v1/payments/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': process.env.PAYLOQA_API_KEY,
-        'X-Platform-Id': process.env.PAYLOQA_PLATFORM_ID,
+    if (!VALID_WALLET_NETWORKS.includes(paymentNetwork)) {
+      return res.status(400).json({ success: false, error: 'Invalid mobile network' });
+    }
+
+    user.phone = formattedPhone;
+    await user.save();
+
+    const redirectUrl = process.env.FRONTEND_URL || 'https://luckytriple.netlify.app';
+    const result = await payloqaPaymentsAPI.createPayment({
+      amount: Number(amount),
+      currency: 'GHS',
+      payment_method: 'mobile_money',
+      phone_number: formattedPhone,
+      network: paymentNetwork,
+      redirect_url: redirectUrl,
+      webhook_url: getPaymentsWebhookUrl(),
+      order_id: `ORDER-${Date.now()}`,
+      metadata: {
+        user_id: user._id.toString(),
+        order_reference: `ORD-${Date.now()}`,
+        phone: formattedPhone,
+        network: paymentNetwork,
       },
-      body: JSON.stringify({
-        amount,
-        currency: 'GHS',
-        payment_method: 'mobile_money',
-        phone_number: formattedPhone,
-        network: network.toLowerCase(),
-        offline: true,
-        webhook_url: `${process.env.BASE_URL}/api/payments/webhook`,
-        metadata: {
-          user_id: user._id.toString(),
-          order_reference: `LT-${Date.now()}`,
-        }
-      })
     });
 
-    const data = await response.json();
-    console.log('Payloqa response:', data);
+    console.log('Payloqa create payment response:', result.status, result.data);
 
-    if (data.success) {
-      res.json({
-        success: true,
-        paymentId: data.data.payment_id,
-        message: data.data.message,
-      });
-    } else {
-      res.status(400).json({
+    if (!result.ok || !result.data?.success || !result.data?.data?.payment_id) {
+      return res.status(400).json({
         success: false,
-        error: data.message || 'Payment initiation failed'
+        error: result.data?.error?.message || result.data?.message || 'Payment initiation failed',
+        code: result.data?.error?.code,
       });
     }
+
+    res.json({
+      success: true,
+      paymentId: result.data.data.payment_id,
+      otpRequired: result.data.data.otp_required,
+      message: result.data.data.message || 'OTP sent to your phone',
+    });
   } catch (error) {
     console.error('Payment initiate error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message || 'Payment initiation failed' });
+  }
+});
+
+app.post('/api/payments/verify-otp', authenticateToken, async (req, res) => {
+  try {
+    const { paymentId, phone, otpCode } = req.body;
+    const formattedPhone = formatGhanaPhone(phone);
+
+    if (!paymentId) {
+      return res.status(400).json({ success: false, error: 'Payment ID is required' });
+    }
+
+    if (!formattedPhone) {
+      return res.status(400).json({ success: false, error: 'Valid phone number is required' });
+    }
+
+    if (!otpCode || String(otpCode).trim().length < 4) {
+      return res.status(400).json({ success: false, error: 'Enter the OTP code sent to your phone' });
+    }
+
+    const result = await payloqaPaymentsAPI.verifyOTP(paymentId, {
+      phone_number: formattedPhone,
+      otp_code: String(otpCode).trim(),
+    });
+
+    console.log('Payloqa verify OTP response:', result.status, result.data);
+
+    if (!result.ok || !result.data?.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.data?.error?.message || result.data?.message || 'OTP verification failed',
+        code: result.data?.error?.code,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: result.data.data?.message || 'OTP verified',
+      status: result.data.data?.status,
+      paymentId,
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({ success: false, error: error.message || 'OTP verification failed' });
+  }
+});
+
+app.post('/api/payments/resend-otp', authenticateToken, async (req, res) => {
+  try {
+    const { paymentId, phone } = req.body;
+    const formattedPhone = formatGhanaPhone(phone);
+
+    if (!paymentId || !formattedPhone) {
+      return res.status(400).json({ success: false, error: 'Payment ID and phone are required' });
+    }
+
+    const result = await payloqaPaymentsAPI.resendOTP(paymentId, {
+      phone_number: formattedPhone,
+    });
+
+    if (!result.ok || !result.data?.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.data?.error?.message || result.data?.message || 'Failed to resend OTP',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: result.data.data?.message || 'OTP resent successfully',
+    });
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to resend OTP' });
   }
 });
 
 app.get('/api/payments/status/:paymentId', authenticateToken, async (req, res) => {
-  await connectToDatabase();
   try {
     const { paymentId } = req.params;
+    const result = await payloqaPaymentsAPI.getStatus(paymentId);
 
-    const response = await fetch(`https://payments.payloqa.com/api/v1/payments/${paymentId}`, {
-      headers: {
-        'X-API-Key': process.env.PAYLOQA_API_KEY,
-        'X-Platform-Id': process.env.PAYLOQA_PLATFORM_ID,
-      }
+    if (!result.ok || !result.data?.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.data?.error?.message || result.data?.message || 'Failed to fetch payment status',
+      });
+    }
+
+    res.json({
+      success: true,
+      payment: result.data.data,
     });
-
-    const data = await response.json();
-    res.json(data);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Payment status error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to fetch payment status' });
   }
 });
 

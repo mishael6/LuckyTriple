@@ -43,8 +43,23 @@ export const API = {
   },
 
   // Payments
-  initiateDeposit: async (amount, network) => {
-    const response = await axios.post('/payments/deposit', { amount, network });
+  initiatePayment: async (amount, phone, network) => {
+    const response = await axios.post('/payments/initiate', { amount, phone, network });
+    return response.data;
+  },
+
+  verifyPaymentOtp: async (paymentId, phone, otpCode) => {
+    const response = await axios.post('/payments/verify-otp', { paymentId, phone, otpCode });
+    return response.data;
+  },
+
+  resendPaymentOtp: async (paymentId, phone) => {
+    const response = await axios.post('/payments/resend-otp', { paymentId, phone });
+    return response.data;
+  },
+
+  getPaymentStatus: async (paymentId) => {
+    const response = await axios.get(`/payments/status/${paymentId}`);
     return response.data;
   },
 
@@ -60,7 +75,7 @@ export const API = {
   },
 
   verifyPayment: async (paymentId) => {
-    const response = await axios.get(`/payments/verify/${paymentId}`);
+    const response = await axios.get(`/payments/status/${paymentId}`);
     return response.data;
   },
 
