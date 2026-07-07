@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API } from '../../api-helper';
+import { GameArt } from './GameArt';
+import { GAME_IMAGES } from '../../assets/gameAssets';
 
 export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
   const [bet, setBet] = useState(gameSettings?.minBet || 10);
@@ -63,8 +65,20 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
       transition={{ duration: 0.35 }}
     >
       <div className="game-card">
-        <h3>🎰 Lucky Slots</h3>
-        <p className="game-subtitle">Spin the reels and hit the jackpot!</p>
+        <div className="game-card__header-art">
+          <GameArt src={GAME_IMAGES.slots} alt="Lucky Slots" size="card" />
+          <div>
+            <h3>Lucky Slots</h3>
+            <p className="game-subtitle">Spin the reels and hit the jackpot!</p>
+          </div>
+        </div>
+
+        <motion.div
+          animate={spinning ? { scale: [1, 1.04, 1], rotate: [0, 2, -2, 0] } : {}}
+          transition={{ duration: 0.8, repeat: spinning ? Infinity : 0 }}
+        >
+          <GameArt src={GAME_IMAGES.slots} alt="Slot machine" size="hero" visual="slots" spinning={spinning} />
+        </motion.div>
 
         <div className="slots-machine">
           <div className="slots-machine__lights">✨ 💫 ✨</div>

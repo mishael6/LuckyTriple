@@ -2,18 +2,71 @@ import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { API } from '../../api-helper';
 import { GameView } from '../ui/Game';
-import { SpinView } from '../ui/SpinView';
+import { PredictionGameView } from '../ui/PredictionGameView';
 import { SlotsView } from '../ui/SlotsView';
-import { RouletteView } from '../ui/RouletteView';
 import { BankView } from '../ui/Bank';
 import { CasinoLobby } from '../ui/CasinoLobby';
 import { CasinoBackground } from '../ui/CasinoBackground';
+import { GAME_IMAGES } from '../../assets/gameAssets';
 
 const GAME_NAMES = {
   'lucky-triple': '🎰 Lucky Triple',
   spin: '🍾 Spin the Bottle',
   slots: '🎰 Lucky Slots',
   roulette: '🎡 Golden Roulette',
+  coin: '🪙 Coin Flip',
+  dice: '🎲 Dice Duel',
+};
+
+const PREDICTION_GAMES = {
+  spin: {
+    title: 'Spin the Bottle',
+    subtitle: 'Predict up or down — pick your multiplier!',
+    emoji: '🍾',
+    imageSrc: GAME_IMAGES.spin,
+    visual: 'bottle',
+    choiceA: { value: 'up', label: 'UP', icon: '⬆️' },
+    choiceB: { value: 'bottom', label: 'BOTTOM', icon: '⬇️' },
+    winChancesKey: 'spinWinChances',
+    playLabel: 'SPIN NOW',
+    play: (bet, choice, mult) => API.playSpinGame(bet, choice, mult),
+  },
+  roulette: {
+    title: 'Golden Roulette',
+    subtitle: 'Red or black? Choose your multiplier like Spin the Bottle!',
+    emoji: '🎡',
+    imageSrc: GAME_IMAGES.roulette,
+    visual: 'wheel',
+    choiceA: { value: 'red', label: 'RED', icon: '🔴' },
+    choiceB: { value: 'black', label: 'BLACK', icon: '⚫' },
+    winChancesKey: 'rouletteWinChances',
+    playLabel: 'SPIN WHEEL',
+    play: (bet, choice, mult) => API.playRouletteGame(bet, choice, mult),
+  },
+  coin: {
+    title: 'Coin Flip',
+    subtitle: 'Heads or tails — flip for glory!',
+    emoji: '🪙',
+    imageSrc: GAME_IMAGES.coin,
+    visual: 'coin',
+    choiceA: { value: 'heads', label: 'HEADS', icon: '🪙' },
+    choiceB: { value: 'tails', label: 'TAILS', icon: '✨' },
+    winChancesKey: 'coinWinChances',
+    playLabel: 'FLIP COIN',
+    play: (bet, choice, mult) => API.playCoinGame(bet, choice, mult),
+  },
+  dice: {
+    title: 'Dice Duel',
+    subtitle: 'High (4-6) or Low (1-3)? Roll and win!',
+    emoji: '🎲',
+    imageSrc: GAME_IMAGES.dice,
+    visual: 'dice',
+    choiceA: { value: 'high', label: 'HIGH', icon: '📈' },
+    choiceB: { value: 'low', label: 'LOW', icon: '📉' },
+    winChancesKey: 'diceWinChances',
+    playLabel: 'ROLL DICE',
+    play: (bet, choice, mult) => API.playDiceGame(bet, choice, mult),
+  },
 };
 
 export const GamePage = ({ user, onLogout, onUpdateUser }) => {
@@ -24,7 +77,6 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
   const [playing, setPlaying] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [gameSettings, setGameSettings] = useState(null);
-
   const [balanceFlash, setBalanceFlash] = useState(null);
 
   useEffect(() => {
@@ -38,12 +90,9 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
       setBalanceFlash(profit > 0 ? 'win' : profit < 0 ? 'lose' : null);
       setTimeout(() => setBalanceFlash(null), 1200);
     }
-
     try {
       const response = await API.getMe();
-      if (response.success && response.user) {
-        onUpdateUser(response.user);
-      }
+      if (response.success && response.user) onUpdateUser(response.user);
     } catch (error) {
       console.error('Failed to sync balance:', error);
     }
@@ -120,11 +169,13 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
     }
   };
 
-  const isInGame = ['lucky-triple', 'spin', 'slots', 'roulette'].includes(view);
+  const isInGame = Object.keys(GAME_NAMES).includes(view);
 
   if (!user) {
     return <div className="loading-screen">Loading user data...</div>;
   }
+
+  const predictionConfig = PREDICTION_GAMES[view];
 
   return (
     <div className="game-container">
@@ -133,20 +184,14 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
       <nav className="top-nav">
         <div className="nav-left">
           <button type="button" className="brand-btn" onClick={() => setView('lobby')}>
-            <span className="brand-btn__mark">🎰</span>
+            <img src={GAME_IMAGES['lucky-triple']} alt="" className="brand-btn__img" />
             <span className="brand-btn__text">Lucky Triple Casino</span>
           </button>
         </div>
-
         <div className="nav-center">
-          <button type="button" className={view === 'lobby' ? 'active' : ''} onClick={() => setView('lobby')}>
-            🏠 Lobby
-          </button>
-          <button type="button" className={view === 'bank' ? 'active' : ''} onClick={() => setView('bank')}>
-            💳 Wallet
-          </button>
+          <button type="button" className={view === 'lobby' ? 'active' : ''} onClick={() => setView('lobby')}>🏠 Lobby</button>
+          <button type="button" className={view === 'bank' ? 'active' : ''} onClick={() => setView('bank')}>💳 Wallet</button>
         </div>
-
         <div className="nav-right">
           <div className={`balance-display ${balanceFlash ? `balance-display--${balanceFlash}` : ''}`}>
             <span className="balance-label">Balance</span>
@@ -156,11 +201,9 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
         </div>
       </nav>
 
-      {isInGame && (
+      {isInGame && view !== 'bank' && (
         <motion.div className="game-breadcrumb" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-          <button type="button" onClick={() => setView('lobby')} className="game-breadcrumb__back">
-            ← Back to lobby
-          </button>
+          <button type="button" onClick={() => setView('lobby')} className="game-breadcrumb__back">← Back to lobby</button>
           <span className="game-breadcrumb__current">{GAME_NAMES[view]}</span>
         </motion.div>
       )}
@@ -188,9 +231,10 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
             />
           )}
 
-          {view === 'spin' && (
-            <SpinView
-              key="spin"
+          {predictionConfig && (
+            <PredictionGameView
+              key={view}
+              {...predictionConfig}
               userBalance={user.balance || 0}
               gameSettings={gameSettings}
               onUpdateUser={handleGameUpdateUser}
@@ -198,21 +242,7 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
           )}
 
           {view === 'slots' && (
-            <SlotsView
-              key="slots"
-              userBalance={user.balance || 0}
-              gameSettings={gameSettings}
-              onUpdateUser={handleGameUpdateUser}
-            />
-          )}
-
-          {view === 'roulette' && (
-            <RouletteView
-              key="roulette"
-              userBalance={user.balance || 0}
-              gameSettings={gameSettings}
-              onUpdateUser={handleGameUpdateUser}
-            />
+            <SlotsView key="slots" userBalance={user.balance || 0} gameSettings={gameSettings} onUpdateUser={handleGameUpdateUser} />
           )}
 
           {view === 'bank' && (

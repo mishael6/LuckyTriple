@@ -1,4 +1,6 @@
 import { motion } from 'framer-motion';
+import { GameArt } from './GameArt';
+import { GAME_IMAGES } from '../../assets/gameAssets';
 
 
 // ============================================================================
@@ -22,8 +24,15 @@ export const GameView = ({
       transition={{ duration: 0.35 }}
     >
       <div className="game-card">
-        <h3>Pick Your Lucky Numbers</h3>
-        <p className="game-subtitle">Choose 3 numbers between 0-9</p>
+        <div className="game-card__header-art">
+          <GameArt src={GAME_IMAGES['lucky-triple']} alt="Lucky Triple" size="card" />
+          <div>
+            <h3>Pick Your Lucky Numbers</h3>
+            <p className="game-subtitle">Choose 3 numbers between 0-9</p>
+          </div>
+        </div>
+
+        <GameArt src={GAME_IMAGES['lucky-triple']} alt="Lucky Triple game" size="medium" visual="lucky" />
 
         <div className="numbers-container">
           {guesses.map((guess, index) => (
@@ -69,7 +78,7 @@ export const GameView = ({
             <div className={`result-message ${result.profit > 0 ? 'win' : 'lose'}`}>
               {result.matches === 3 && '🎉 JACKPOT! All 3 Correct!'}
               {result.matches === 2 && '🌟 Great! 2 Correct!'}
-              {result.matches === 1 && '👍 Nice! 1 Correct, You get your BET back!'}
+              {result.matches === 1 && `👍 1 Correct! +GHS ${result.profit.toFixed(2)} profit`}
               {result.matches === 0 && '😔 No matches. Try again!'}
             </div>
 

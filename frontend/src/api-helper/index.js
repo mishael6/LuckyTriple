@@ -96,8 +96,18 @@ export const API = {
     return response.data;
   },
 
-  playRouletteGame: async (bet, betType, betNumber) => {
-    const response = await axios.post('/game/roulette', { bet, betType, betNumber });
+  playRouletteGame: async (bet, choice, multiplier) => {
+    const response = await axios.post('/game/roulette', { bet, choice, multiplier });
+    return response.data;
+  },
+
+  playCoinGame: async (bet, choice, multiplier) => {
+    const response = await axios.post('/game/coin', { bet, choice, multiplier });
+    return response.data;
+  },
+
+  playDiceGame: async (bet, choice, multiplier) => {
+    const response = await axios.post('/game/dice', { bet, choice, multiplier });
     return response.data;
   },
 
@@ -144,6 +154,16 @@ export const API = {
 
   getAdminRouletteHistory: async () => {
     const response = await axios.get('/admin/roulette-history');
+    return response.data;
+  },
+
+  getAdminCoinHistory: async () => {
+    const response = await axios.get('/admin/coin-history');
+    return response.data;
+  },
+
+  getAdminDiceHistory: async () => {
+    const response = await axios.get('/admin/dice-history');
     return response.data;
   },
 

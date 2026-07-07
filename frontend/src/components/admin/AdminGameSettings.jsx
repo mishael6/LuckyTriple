@@ -18,6 +18,16 @@ const SettingInput = ({ label, value, onChange, min, max }) => (
   </div>
 );
 
+const MultiplierChances = ({ title, chancesKey, s, setGameSettings }) => (
+  <>
+    <h4>{title}</h4>
+    <SettingInput label="x2 Win %" value={s[chancesKey]?.x2} onChange={(v) => setGameSettings(updateNested(s, chancesKey, 'x2', v))} max={100} />
+    <SettingInput label="x3 Win %" value={s[chancesKey]?.x3} onChange={(v) => setGameSettings(updateNested(s, chancesKey, 'x3', v))} max={100} />
+    <SettingInput label="x4 Win %" value={s[chancesKey]?.x4} onChange={(v) => setGameSettings(updateNested(s, chancesKey, 'x4', v))} max={100} />
+    <p className="settings-hint">Win pays: bet × multiplier. Lose costs full bet.</p>
+  </>
+);
+
 const Toggle = ({ label, checked, onChange }) => (
   <label className="game-toggle">
     <input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
@@ -48,19 +58,14 @@ export const AdminGameSettings = ({ gameSettings, setGameSettings, onSave }) => 
         <SettingInput label="House Fee (%)" value={s.houseFee} onChange={(v) => setGameSettings({ ...s, houseFee: v })} />
         <SettingInput label="Minimum Bet (GHS)" value={s.minBet} onChange={(v) => setGameSettings({ ...s, minBet: v })} />
         <SettingInput label="Maximum Bet (GHS)" value={s.maxBet} onChange={(v) => setGameSettings({ ...s, maxBet: v })} />
-
         <div className="setting-item">
           <label>Difficulty Preset</label>
           <select value={s.difficulty || 'medium'} onChange={(e) => setGameSettings({ ...s, difficulty: e.target.value })}>
-            {DIFFICULTY_OPTIONS.map((opt) => (
-              <option key={opt.id} value={opt.id}>{opt.label}</option>
-            ))}
+            {DIFFICULTY_OPTIONS.map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
           </select>
           <div className="difficulty-presets">
             {DIFFICULTY_OPTIONS.map((opt) => (
-              <button key={opt.id} type="button" className="preset-btn" onClick={() => handleApplyDifficulty(opt.id)}>
-                Apply {opt.label}
-              </button>
+              <button key={opt.id} type="button" className="preset-btn" onClick={() => handleApplyDifficulty(opt.id)}>Apply {opt.label}</button>
             ))}
           </div>
         </div>
@@ -71,55 +76,52 @@ export const AdminGameSettings = ({ gameSettings, setGameSettings, onSave }) => 
         <div className="game-toggles">
           <Toggle label="🎰 Lucky Triple" checked={s.gamesEnabled?.luckyTriple !== false} onChange={(v) => setGameSettings(updateNested(s, 'gamesEnabled', 'luckyTriple', v))} />
           <Toggle label="🍾 Spin the Bottle" checked={s.gamesEnabled?.spin !== false} onChange={(v) => setGameSettings(updateNested(s, 'gamesEnabled', 'spin', v))} />
-          <Toggle label="🎰 Lucky Slots" checked={s.gamesEnabled?.slots !== false} onChange={(v) => setGameSettings(updateNested(s, 'gamesEnabled', 'slots', v))} />
           <Toggle label="🎡 Golden Roulette" checked={s.gamesEnabled?.roulette !== false} onChange={(v) => setGameSettings(updateNested(s, 'gamesEnabled', 'roulette', v))} />
+          <Toggle label="🪙 Coin Flip" checked={s.gamesEnabled?.coin !== false} onChange={(v) => setGameSettings(updateNested(s, 'gamesEnabled', 'coin', v))} />
+          <Toggle label="🎲 Dice Duel" checked={s.gamesEnabled?.dice !== false} onChange={(v) => setGameSettings(updateNested(s, 'gamesEnabled', 'dice', v))} />
+          <Toggle label="🎰 Lucky Slots" checked={s.gamesEnabled?.slots !== false} onChange={(v) => setGameSettings(updateNested(s, 'gamesEnabled', 'slots', v))} />
         </div>
       </section>
 
       <section className="settings-section">
-        <h4>🎰 Lucky Triple — Win Chances (%)</h4>
+        <h4>🎰 Lucky Triple</h4>
         <SettingInput label="3 Matches %" value={s.tripleWinChances?.threeMatch} onChange={(v) => setGameSettings(updateNested(s, 'tripleWinChances', 'threeMatch', v))} max={100} />
         <SettingInput label="2 Matches %" value={s.tripleWinChances?.twoMatch} onChange={(v) => setGameSettings(updateNested(s, 'tripleWinChances', 'twoMatch', v))} max={100} />
         <SettingInput label="1 Match %" value={s.tripleWinChances?.oneMatch} onChange={(v) => setGameSettings(updateNested(s, 'tripleWinChances', 'oneMatch', v))} max={100} />
         <SettingInput label="0 Matches %" value={s.tripleWinChances?.zeroMatch} onChange={(v) => setGameSettings(updateNested(s, 'tripleWinChances', 'zeroMatch', v))} max={100} />
-        <h5>Payout Multipliers</h5>
-        <SettingInput label="3 Matches Multiplier" value={s.payoutMultipliers?.threeMatches} onChange={(v) => setGameSettings(updateNested(s, 'payoutMultipliers', 'threeMatches', v))} />
-        <SettingInput label="2 Matches Multiplier" value={s.payoutMultipliers?.twoMatches} onChange={(v) => setGameSettings(updateNested(s, 'payoutMultipliers', 'twoMatches', v))} />
-        <SettingInput label="1 Match Multiplier" value={s.payoutMultipliers?.oneMatch} onChange={(v) => setGameSettings(updateNested(s, 'payoutMultipliers', 'oneMatch', v))} />
+        <h5>Payout Multipliers (win = bet × mult)</h5>
+        <SettingInput label="3 Matches" value={s.payoutMultipliers?.threeMatches} onChange={(v) => setGameSettings(updateNested(s, 'payoutMultipliers', 'threeMatches', v))} />
+        <SettingInput label="2 Matches" value={s.payoutMultipliers?.twoMatches} onChange={(v) => setGameSettings(updateNested(s, 'payoutMultipliers', 'twoMatches', v))} />
+        <SettingInput label="1 Match" value={s.payoutMultipliers?.oneMatch} onChange={(v) => setGameSettings(updateNested(s, 'payoutMultipliers', 'oneMatch', v))} />
       </section>
 
       <section className="settings-section">
-        <h4>🍾 Spin the Bottle — Win Chances (%)</h4>
-        <SettingInput label="x2 Multiplier Win %" value={s.spinWinChances?.x2} onChange={(v) => setGameSettings(updateNested(s, 'spinWinChances', 'x2', v))} max={100} />
-        <SettingInput label="x3 Multiplier Win %" value={s.spinWinChances?.x3} onChange={(v) => setGameSettings(updateNested(s, 'spinWinChances', 'x3', v))} max={100} />
-        <SettingInput label="x4 Multiplier Win %" value={s.spinWinChances?.x4} onChange={(v) => setGameSettings(updateNested(s, 'spinWinChances', 'x4', v))} max={100} />
+        <MultiplierChances title="🍾 Spin the Bottle" chancesKey="spinWinChances" s={s} setGameSettings={setGameSettings} />
+      </section>
+
+      <section className="settings-section">
+        <MultiplierChances title="🎡 Golden Roulette" chancesKey="rouletteWinChances" s={s} setGameSettings={setGameSettings} />
+      </section>
+
+      <section className="settings-section">
+        <MultiplierChances title="🪙 Coin Flip" chancesKey="coinWinChances" s={s} setGameSettings={setGameSettings} />
+      </section>
+
+      <section className="settings-section">
+        <MultiplierChances title="🎲 Dice Duel" chancesKey="diceWinChances" s={s} setGameSettings={setGameSettings} />
       </section>
 
       <section className="settings-section">
         <h4>🎰 Lucky Slots</h4>
-        <h5>Win Chances (%)</h5>
         <SettingInput label="Jackpot %" value={s.slotsWinChances?.jackpot} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'jackpot', v))} max={100} />
-        <SettingInput label="Big Win (3-of-kind) %" value={s.slotsWinChances?.bigWin} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'bigWin', v))} max={100} />
-        <SettingInput label="Small Win (2-of-kind) %" value={s.slotsWinChances?.smallWin} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'smallWin', v))} max={100} />
-        <h5>Payout Multipliers</h5>
-        <SettingInput label="Jackpot Multiplier" value={s.slotsPayouts?.jackpot} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'jackpot', v))} />
-        <SettingInput label="3-of-kind Multiplier" value={s.slotsPayouts?.threeOfKind} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'threeOfKind', v))} />
-        <SettingInput label="2-of-kind Multiplier" value={s.slotsPayouts?.twoOfKind} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'twoOfKind', v))} />
+        <SettingInput label="Big Win %" value={s.slotsWinChances?.bigWin} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'bigWin', v))} max={100} />
+        <SettingInput label="Small Win %" value={s.slotsWinChances?.smallWin} onChange={(v) => setGameSettings(updateNested(s, 'slotsWinChances', 'smallWin', v))} max={100} />
+        <SettingInput label="Jackpot Mult" value={s.slotsPayouts?.jackpot} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'jackpot', v))} />
+        <SettingInput label="3-of-kind Mult" value={s.slotsPayouts?.threeOfKind} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'threeOfKind', v))} />
+        <SettingInput label="2-of-kind Mult" value={s.slotsPayouts?.twoOfKind} onChange={(v) => setGameSettings(updateNested(s, 'slotsPayouts', 'twoOfKind', v))} />
       </section>
 
-      <section className="settings-section">
-        <h4>🎡 Golden Roulette</h4>
-        <h5>Win Chances (%)</h5>
-        <SettingInput label="Red/Black Win %" value={s.rouletteWinChances?.color} onChange={(v) => setGameSettings(updateNested(s, 'rouletteWinChances', 'color', v))} max={100} />
-        <SettingInput label="Number Win %" value={s.rouletteWinChances?.number} onChange={(v) => setGameSettings(updateNested(s, 'rouletteWinChances', 'number', v))} max={100} />
-        <h5>Payout Multipliers</h5>
-        <SettingInput label="Red/Black Payout" value={s.roulettePayouts?.color} onChange={(v) => setGameSettings(updateNested(s, 'roulettePayouts', 'color', v))} />
-        <SettingInput label="Number Payout" value={s.roulettePayouts?.number} onChange={(v) => setGameSettings(updateNested(s, 'roulettePayouts', 'number', v))} />
-      </section>
-
-      <button type="button" className="save-settings-btn" onClick={onSave}>
-        💾 Save All Game Settings
-      </button>
+      <button type="button" className="save-settings-btn" onClick={onSave}>💾 Save All Game Settings</button>
     </div>
   );
 };

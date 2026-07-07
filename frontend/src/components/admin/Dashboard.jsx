@@ -19,6 +19,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
   const [spinHistory, setSpinHistory] = useState([]);
   const [slotsHistory, setSlotsHistory] = useState([]);
   const [rouletteHistory, setRouletteHistory] = useState([]);
+  const [coinHistory, setCoinHistory] = useState([]);
+  const [diceHistory, setDiceHistory] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // SMS State
@@ -61,6 +63,12 @@ export const AdminDashboard = ({ user, onLogout }) => {
       } else if (view === 'roulette-history') {
         const response = await API.getAdminRouletteHistory();
         if (response.success) setRouletteHistory(response.history);
+      } else if (view === 'coin-history') {
+        const response = await API.getAdminCoinHistory();
+        if (response.success) setCoinHistory(response.history);
+      } else if (view === 'dice-history') {
+        const response = await API.getAdminDiceHistory();
+        if (response.success) setDiceHistory(response.history);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -224,12 +232,9 @@ export const AdminDashboard = ({ user, onLogout }) => {
           >
             🎰 Slots
           </button>
-          <button
-            className={view === 'roulette-history' ? 'active' : ''}
-            onClick={() => setView('roulette-history')}
-          >
-            🎡 Roulette
-          </button>
+          <button className={view === 'roulette-history' ? 'active' : ''} onClick={() => setView('roulette-history')}>🎡 Roulette</button>
+          <button className={view === 'coin-history' ? 'active' : ''} onClick={() => setView('coin-history')}>🪙 Coin</button>
+          <button className={view === 'dice-history' ? 'active' : ''} onClick={() => setView('dice-history')}>🎲 Dice</button>
           <button
             className={view === 'settings' ? 'active' : ''}
             onClick={() => setView('settings')}
@@ -562,9 +567,9 @@ export const AdminDashboard = ({ user, onLogout }) => {
                   <tr>
                     <th>User</th>
                     <th>Bet</th>
-                    <th>Bet Type</th>
-                    <th>Number Bet</th>
-                    <th>Spin Result</th>
+                    <th>Pick</th>
+                    <th>Multiplier</th>
+                    <th>Outcome</th>
                     <th>Result</th>
                     <th>Date</th>
                   </tr>
@@ -574,14 +579,67 @@ export const AdminDashboard = ({ user, onLogout }) => {
                     <tr key={h._id}>
                       <td>{h.userId?.email || 'Unknown'}</td>
                       <td>GHS {h.betAmount.toFixed(2)}</td>
-                      <td>{h.betType}</td>
-                      <td>{h.betNumber ?? '—'}</td>
-                      <td>{h.spinNumber} ({h.spinColor})</td>
+                      <td>{h.choice || h.betType}</td>
+                      <td>x{h.multiplier}</td>
+                      <td>{h.outcome || h.spinColor}</td>
                       <td>
                         <span className={`status-badge ${h.won ? 'completed' : 'rejected'}`}>
                           {h.won ? `+GHS ${h.profit.toFixed(2)}` : `-GHS ${Math.abs(h.profit).toFixed(2)}`}
                         </span>
                       </td>
+                      <td>{new Date(h.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {view === 'coin-history' && (
+          <div className="admin-section">
+            <h3>🪙 Coin Flip History</h3>
+            <div className="withdrawals-table">
+              <table>
+                <thead>
+                  <tr><th>User</th><th>Bet</th><th>Pick</th><th>Mult</th><th>Outcome</th><th>Result</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                  {coinHistory.map((h) => (
+                    <tr key={h._id}>
+                      <td>{h.userId?.email || 'Unknown'}</td>
+                      <td>GHS {h.betAmount.toFixed(2)}</td>
+                      <td>{h.choice}</td>
+                      <td>x{h.multiplier}</td>
+                      <td>{h.outcome}</td>
+                      <td><span className={`status-badge ${h.won ? 'completed' : 'rejected'}`}>{h.won ? `+GHS ${h.profit.toFixed(2)}` : `-GHS ${Math.abs(h.profit).toFixed(2)}`}</span></td>
+                      <td>{new Date(h.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {view === 'dice-history' && (
+          <div className="admin-section">
+            <h3>🎲 Dice Duel History</h3>
+            <div className="withdrawals-table">
+              <table>
+                <thead>
+                  <tr><th>User</th><th>Bet</th><th>Pick</th><th>Mult</th><th>Roll</th><th>Outcome</th><th>Result</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                  {diceHistory.map((h) => (
+                    <tr key={h._id}>
+                      <td>{h.userId?.email || 'Unknown'}</td>
+                      <td>GHS {h.betAmount.toFixed(2)}</td>
+                      <td>{h.choice}</td>
+                      <td>x{h.multiplier}</td>
+                      <td>{h.diceRoll}</td>
+                      <td>{h.outcome}</td>
+                      <td><span className={`status-badge ${h.won ? 'completed' : 'rejected'}`}>{h.won ? `+GHS ${h.profit.toFixed(2)}` : `-GHS ${Math.abs(h.profit).toFixed(2)}`}</span></td>
                       <td>{new Date(h.createdAt).toLocaleString()}</td>
                     </tr>
                   ))}
