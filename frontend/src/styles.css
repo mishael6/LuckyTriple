@@ -3550,3 +3550,76 @@ body > div[id*='react-select'] {
 .settings-form--games .save-settings-btn {
   grid-column: 1 / -1;
 }
+
+/* ============================================================================
+   GOOGLE ADS (AdSense for web — linked to your AdMob publisher account)
+   ============================================================================ */
+
+.game-ad-banner {
+  margin-top: auto;
+  padding: 12px 16px 20px;
+}
+
+.ad-banner-wrap,
+.ad-interstitial-card {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ad-banner-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 8px 12px 0;
+}
+
+.ad-banner-slot {
+  min-height: 60px;
+}
+
+.ad-interstitial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.ad-interstitial-card {
+  width: min(100%, 420px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.ad-interstitial-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ad-interstitial-skip {
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  background: rgba(255, 215, 0, 0.12);
+  color: #ffd700;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ad-interstitial-slot {
+  min-height: 250px;
+}

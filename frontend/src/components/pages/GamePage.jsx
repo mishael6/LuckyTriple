@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { API } from '../../api-helper';
 import { GameView } from '../ui/Game';
@@ -8,6 +8,9 @@ import { BankView } from '../ui/Bank';
 import { CasinoLobby } from '../ui/CasinoLobby';
 import { CasinoBackground } from '../ui/CasinoBackground';
 import { GAME_IMAGES } from '../../assets/gameAssets';
+import { AdBanner } from '../../ads/AdBanner';
+import { AdInterstitial } from '../../ads/AdInterstitial';
+import { INTERSTITIAL_FREQUENCY, hasInterstitialSlot, isAdsConfigured } from '../../ads/adConfig';
 
 const GAME_NAMES = {
   'lucky-triple': '🎰 Lucky Triple',
@@ -78,6 +81,9 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [gameSettings, setGameSettings] = useState(null);
   const [balanceFlash, setBalanceFlash] = useState(null);
+  const [pendingGame, setPendingGame] = useState(null);
+  const [showInterstitial, setShowInterstitial] = useState(false);
+  const gameLaunchCountRef = useRef(0);
 
   useEffect(() => {
     loadGameSettings();
@@ -153,11 +159,38 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
     setGuesses(['', '', '']);
   };
 
-  const handleSelectGame = (gameId) => {
+  const openGame = (gameId) => {
     setView(gameId);
     if (gameId === 'lucky-triple') {
       setResult(null);
       setGuesses(['', '', '']);
+    }
+  };
+
+  const handleSelectGame = (gameId) => {
+    if (gameId === 'bank') {
+      setView('bank');
+      return;
+    }
+
+    gameLaunchCountRef.current += 1;
+    const shouldShowAd = hasInterstitialSlot() &&
+      gameLaunchCountRef.current % INTERSTITIAL_FREQUENCY === 0;
+
+    if (shouldShowAd) {
+      setPendingGame(gameId);
+      setShowInterstitial(true);
+      return;
+    }
+
+    openGame(gameId);
+  };
+
+  const handleInterstitialClose = () => {
+    setShowInterstitial(false);
+    if (pendingGame) {
+      openGame(pendingGame);
+      setPendingGame(null);
     }
   };
 
@@ -250,6 +283,9 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
           )}
         </AnimatePresence>
       </main>
+
+      <AdBanner className="game-ad-banner" />
+      <AdInterstitial open={showInterstitial} onClose={handleInterstitialClose} />
     </div>
   );
 };
