@@ -168,26 +168,36 @@ body {
 .input-group select {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #1a1f3a;
+  border: 1px solid rgba(255, 215, 0, 0.35);
   border-radius: 10px;
   color: #fff;
   font-size: 16px;
   box-sizing: border-box;
   transition: all 0.2s;
+  cursor: pointer;
+  min-height: 48px;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffd700' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 18px;
   padding-right: 40px;
 }
 
+.input-group select option {
+  background-color: #1a1f3a;
+  color: #fff;
+}
+
 .input-group select:focus {
   outline: none;
-  border-color: #4CAF50;
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  border-color: #ffd700;
+  background-color: #222849;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffd700' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.15);
 }
 
 .input-group input::placeholder {
@@ -804,6 +814,50 @@ body {
 .bank-form {
   margin-top: 24px;
   width: 100%;
+}
+
+.bank-network-picker {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.bank-network-picker button {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bank-network-picker button:hover {
+  border-color: rgba(255, 215, 0, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bank-network-picker button.active {
+  border-color: #ffd700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.22) 0%, rgba(240, 165, 0, 0.18) 100%);
+  color: #ffd700;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.15);
+}
+
+@media (min-width: 520px) {
+  .bank-network-picker {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .bank-network-picker button {
+    text-align: center;
+    font-size: 13px;
+    padding: 12px 8px;
+  }
 }
 
 .bank-message {
@@ -3327,19 +3381,62 @@ body.payment-widget-open .game-main {
   inset: 0;
   z-index: 2147483000;
   isolation: isolate;
-  pointer-events: none;
-}
-
-.payloqa-widget-portal > * {
-  pointer-events: auto;
 }
 
 .payloqa-payment-widget {
   color: #111827;
   -webkit-text-fill-color: initial;
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 2147483000 !important;
+}
+
+.payloqa-payment-widget .payment-widget-modal {
+  overflow: visible !important;
+}
+
+.payloqa-payment-widget .overflow-hidden,
+.payloqa-payment-widget .overflow-y-auto {
+  overflow: visible !important;
+}
+
+.payloqa-payment-widget [class*='-control'],
+.payloqa-payment-widget [class*='__control'] {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  min-height: 44px !important;
+  color: #111827 !important;
+}
+
+.payloqa-payment-widget [class*='-singleValue'],
+.payloqa-payment-widget [class*='-placeholder'],
+.payloqa-payment-widget [class*='-input'] input {
+  color: #111827 !important;
+}
+
+.payloqa-payment-widget [class*='-menu'],
+.payloqa-payment-widget [class*='__menu'],
+body > div[id*='react-select'] {
+  z-index: 2147483647 !important;
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #d1d5db !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+.payloqa-payment-widget [class*='-option'],
+.payloqa-payment-widget [class*='__option'] {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+.payloqa-payment-widget [class*='-option'][aria-selected='true'],
+.payloqa-payment-widget [class*='__option--is-selected'] {
+  background-color: #fef3c7 !important;
+  color: #111827 !important;
+}
+
+.payloqa-payment-widget [class*='-option']:hover,
+.payloqa-payment-widget [class*='__option--is-focused'] {
+  background-color: #fff7d6 !important;
+  color: #111827 !important;
 }
 
 .payloqa-payment-widget .fixed {

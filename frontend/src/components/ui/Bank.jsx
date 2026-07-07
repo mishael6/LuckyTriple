@@ -266,13 +266,18 @@ export const BankView = ({ user, onUpdateUser }) => {
 
           <div className="input-group">
             <label>Mobile Network</label>
-            <select value={network} onChange={(e) => setNetwork(e.target.value)}>
+            <div className="bank-network-picker" role="group" aria-label="Mobile network">
               {NETWORK_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
+                <button
+                  key={option.value}
+                  type="button"
+                  className={network === option.value ? 'active' : ''}
+                  onClick={() => setNetwork(option.value)}
+                >
                   {option.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           <div className="input-group">
