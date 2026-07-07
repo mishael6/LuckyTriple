@@ -64,6 +64,7 @@ export const BankView = ({ user, onUpdateUser }) => {
     const apiKey = import.meta.env.VITE_PAYMENT_API_KEY;
     const platformId = import.meta.env.VITE_PAYMENT_PLATFORM_ID;
     const redirectUrl = import.meta.env.VITE_REDIRECT_URL;
+    const paymentsApiUrl = import.meta.env.VITE_PAYLOQA_PAYMENTS_URL || 'https://api.payloqa.com/v1/payments';
     const webhookUrl = `${import.meta.env.VITE_API_URL}/payments/webhook`;
 
     if (!apiKey || !platformId) {
@@ -85,6 +86,7 @@ export const BankView = ({ user, onUpdateUser }) => {
     setPaymentConfig({
       apiKey,
       platformId,
+      apiUrl: paymentsApiUrl,
       amount: depositAmount,
       currency: 'GHS',
       primaryColor: '#f0a500',
