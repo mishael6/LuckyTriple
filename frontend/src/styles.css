@@ -3467,16 +3467,35 @@ body.payment-widget-open .game-main {
   margin-top: 10px;
 }
 
-/* Payloqa widget portals itself to document.body — do not wrap in a full-screen overlay */
-body > .payloqa-payment-widget {
-  z-index: 100000 !important;
+/* Payloqa widget portals to document.body — force root overlay above casino glass cards */
+body > .payloqa-payment-widget,
+.payloqa-payment-widget {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+  isolation: isolate !important;
   pointer-events: auto !important;
+}
+
+.payloqa-payment-widget > .fixed {
+  z-index: 1 !important;
+}
+
+.payloqa-payment-widget .payment-widget-modal {
+  position: relative !important;
+  z-index: 2 !important;
+  pointer-events: auto !important;
+}
+
+body.payment-widget-open .game-main,
+body.payment-widget-open .top-nav,
+body.payment-widget-open .bank-card {
+  z-index: 0 !important;
 }
 
 .payloqa-payment-widget {
   color: #111827;
   -webkit-text-fill-color: initial;
-  pointer-events: auto !important;
 }
 
 .payloqa-payment-widget input,
@@ -3495,13 +3514,9 @@ body > .payloqa-payment-widget {
   -webkit-user-select: text !important;
 }
 
-.payloqa-payment-widget .payment-widget-modal {
-  pointer-events: auto !important;
-}
-
 /* React-select menus also portal to body */
 body > div[id*='react-select'] {
-  z-index: 100001 !important;
+  z-index: 2147483647 !important;
   pointer-events: auto !important;
 }
 

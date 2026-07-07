@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { API } from '../../api-helper';
 import { PaymentWidget } from '@payloqa/payment-widget';
@@ -20,6 +20,18 @@ export const BankView = ({ user, onUpdateUser }) => {
   const [messageType, setMessageType] = useState('error');
   const [isOpen, setIsOpen] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('payment-widget-open');
+    } else {
+      document.body.classList.remove('payment-widget-open');
+    }
+
+    return () => {
+      document.body.classList.remove('payment-widget-open');
+    };
+  }, [isOpen]);
 
   const showMessage = (text, type = 'error') => {
     setMessage(text);
@@ -149,7 +161,7 @@ export const BankView = ({ user, onUpdateUser }) => {
 
   return (
     <motion.div
-      className="bank-view"
+      className={`bank-view${isOpen ? ' bank-view--payment-open' : ''}`}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
