@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { GAME_IMAGES } from '../../assets/gameAssets';
 
 export const LoadingScreen = ({ label = 'Loading' }) => (
   <div className="loading-screen">
@@ -9,7 +10,7 @@ export const LoadingScreen = ({ label = 'Loading' }) => (
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4 }}
     >
-      <div className="loading-screen__logo">LT</div>
+      <img src={GAME_IMAGES.roulette} alt="" className="loading-screen__logo-img" />
       <h2 className="loading-screen__title">Lucky Triple</h2>
       <div className="loading-screen__bar">
         <motion.div

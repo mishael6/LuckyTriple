@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { API } from '../../api-helper';
 import { CasinoBackground } from '../ui/CasinoBackground';
+import { GAME_IMAGES } from '../../assets/gameAssets';
 
 export const AuthPage = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -54,7 +55,7 @@ export const AuthPage = ({ onLogin }) => {
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="logo-section">
-          <div className="logo-mark">LT</div>
+          <img src={GAME_IMAGES.roulette} alt="Lucky Triple Casino" className="logo-image" />
           <h1>Lucky Triple Casino</h1>
           <p>Multiple games. Real wins. Payloqa-powered wallet.</p>
         </div>

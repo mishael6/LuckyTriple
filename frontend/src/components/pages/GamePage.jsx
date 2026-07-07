@@ -217,7 +217,7 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
       <nav className="top-nav">
         <div className="nav-left">
           <button type="button" className="brand-btn" onClick={() => setView('lobby')}>
-            <img src={GAME_IMAGES['lucky-triple']} alt="" className="brand-btn__img" />
+            <img src={GAME_IMAGES.roulette} alt="" className="brand-btn__img" />
             <span className="brand-btn__text">Lucky Triple Casino</span>
           </button>
         </div>

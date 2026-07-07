@@ -73,6 +73,16 @@ body {
   margin-bottom: 40px;
 }
 
+.logo-image {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  margin: 0 auto 16px;
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(255, 215, 0, 0.35));
+  animation: pulse 2s ease-in-out infinite;
+}
+
 .logo {
   font-size: 72px;
   margin-bottom: 16px;
@@ -2842,6 +2852,16 @@ body.payment-widget-open .game-main {
   position: relative;
   z-index: 1;
   text-align: center;
+}
+
+.loading-screen__logo-img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  margin: 0 auto 16px;
+  display: block;
+  filter: drop-shadow(0 8px 32px rgba(255, 215, 0, 0.4));
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .loading-screen__logo {
