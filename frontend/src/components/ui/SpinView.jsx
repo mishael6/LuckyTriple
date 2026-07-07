@@ -131,14 +131,7 @@ export const SpinView = ({
 
                     {/* MULTIPLIER PICKER */}
                     <div className="control-group">
-                        <label>
-                            2. Choose Multiplier
-                            {(gameSettings?.spinWinChances) &&
-                                <span className="win-chance-hint">
-                                    Win Chance: {gameSettings.spinWinChances[`x${multiplier}`]}%
-                                </span>
-                            }
-                        </label>
+                        <label>2. Choose Multiplier</label>
                         <div className="button-group">
                             {[2, 3, 4].map(mult => (
                                 <button

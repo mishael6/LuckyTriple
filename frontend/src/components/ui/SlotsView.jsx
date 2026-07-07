@@ -54,8 +54,6 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
     return <div className="game-view"><div className="loading">Loading slots...</div></div>;
   }
 
-  const chances = gameSettings.slotsWinChances || {};
-
   return (
     <motion.div
       className="game-view slots-game"
@@ -134,9 +132,6 @@ export const SlotsView = ({ userBalance, gameSettings, onUpdateUser }) => {
             />
             <button type="button" onClick={() => setBet(Math.min(gameSettings.maxBet, bet + 10))} disabled={spinning}>+10</button>
           </div>
-          <p className="slots-odds">
-            Win rates: Jackpot {chances.jackpot || 3}% · Big {chances.bigWin || 15}% · Small {chances.smallWin || 35}%
-          </p>
         </div>
 
         <button type="button" className="play-btn slots-spin-btn" onClick={handleSpin} disabled={spinning}>

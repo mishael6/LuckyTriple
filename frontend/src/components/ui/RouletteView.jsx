@@ -50,7 +50,6 @@ export const RouletteView = ({ userBalance, gameSettings, onUpdateUser }) => {
     return <div className="game-view"><div className="loading">Loading roulette...</div></div>;
   }
 
-  const chances = gameSettings.rouletteWinChances || {};
   const payouts = gameSettings.roulettePayouts || {};
 
   return (
@@ -102,7 +101,7 @@ export const RouletteView = ({ userBalance, gameSettings, onUpdateUser }) => {
             onClick={() => setBetType('red')}
             disabled={spinning}
           >
-            🔴 Red ({payouts.color || 2}x · {chances.color || 48}%)
+            🔴 Red ({payouts.color || 2}x)
           </button>
           <button
             type="button"
@@ -110,7 +109,7 @@ export const RouletteView = ({ userBalance, gameSettings, onUpdateUser }) => {
             onClick={() => setBetType('black')}
             disabled={spinning}
           >
-            ⚫ Black ({payouts.color || 2}x · {chances.color || 48}%)
+            ⚫ Black ({payouts.color || 2}x)
           </button>
           <button
             type="button"
@@ -118,7 +117,7 @@ export const RouletteView = ({ userBalance, gameSettings, onUpdateUser }) => {
             onClick={() => setBetType('number')}
             disabled={spinning}
           >
-            🎯 Number ({payouts.number || 35}x · {chances.number || 3}%)
+            🎯 Number ({payouts.number || 35}x)
           </button>
         </div>
 

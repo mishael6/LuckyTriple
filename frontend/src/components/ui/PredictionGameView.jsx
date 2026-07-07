@@ -35,7 +35,6 @@ export const PredictionGameView = ({
   userBalance,
   gameSettings,
   onUpdateUser,
-  winChancesKey,
   onPlay,
   playLabel = 'PLAY',
 }) => {
@@ -46,8 +45,6 @@ export const PredictionGameView = ({
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
   const [extra, setExtra] = useState(null);
-
-  const winChances = gameSettings?.[winChancesKey] || {};
 
   const handlePlay = async () => {
     const minBet = gameSettings?.minBet || 1;
@@ -184,10 +181,7 @@ export const PredictionGameView = ({
           </div>
 
           <div className="control-group">
-            <label>
-              2. Choose Multiplier
-              <span className="win-chance-hint">Win chance: {winChances[`x${multiplier}`] ?? '—'}%</span>
-            </label>
+            <label>2. Choose Multiplier</label>
             <div className="button-group">
               {[2, 3, 4].map((mult) => (
                 <button
