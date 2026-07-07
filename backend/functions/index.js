@@ -19,7 +19,7 @@ app.use(express.json());
 // PAYLOQA API CONFIGURATION
 // ============================================================================
 
-const PAYLOQA_API_BASE = (process.env.PAYLOQA_API_BASE_URL || 'https://api.payloqa.com').replace(/\/$/, '');
+const PAYLOQA_API_BASE = (process.env.PAYLOQA_API_BASE_URL || 'https://payments.payloqa.com/api/v1').replace(/\/$/, '');
 
 const PAYLOQA_CONFIG = {
   apiKey: process.env.PAYLOQA_API_KEY || 'pk_live_of502pjkel',

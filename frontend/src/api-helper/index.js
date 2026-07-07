@@ -49,7 +49,7 @@ export const API = {
   },
 
   verifyPayment: async (paymentId) => {
-    const response = await axios.get(`/payments/verify/${paymentId}`);
+    const response = await axios.get(`/payments/status/${paymentId}`);
     return response.data;
   },
 

@@ -40,14 +40,14 @@ app.use(express.json());
 // PAYLOQA API CONFIGURATION
 // ============================================================================
 
-const PAYLOQA_API_BASE = (process.env.PAYLOQA_API_BASE_URL || 'https://api.payloqa.com').replace(/\/$/, '');
+const PAYLOQA_API_BASE = (process.env.PAYLOQA_API_BASE_URL || 'https://payments.payloqa.com/api/v1').replace(/\/$/, '');
 
 const PAYLOQA_CONFIG = {
   apiKey: process.env.PAYLOQA_API_KEY || 'pk_live_of502pjkel',
   platformId: process.env.PAYLOQA_PLATFORM_ID || 'plat_xvadsq3rx0f',
   apiBaseURL: PAYLOQA_API_BASE,
   smsBaseURL: process.env.PAYLOQA_SMS_URL || 'https://sms.payloqa.com/api/v1',
-  paymentsBaseURL: process.env.PAYLOQA_PAYMENTS_URL || `${PAYLOQA_API_BASE}/v1/payments`,
+  paymentsBaseURL: process.env.PAYLOQA_PAYMENTS_URL || `${PAYLOQA_API_BASE}/payments`,
 };
 
 const VALID_WALLET_NETWORKS = ['mtn', 'vodafone', 'airteltigo'];
@@ -818,25 +818,30 @@ app.put('/api/user/wallet-phone', authenticateToken, async (req, res) => {
 // ROUTES - PAYMENTS & DEPOSITS
 // ============================================================================
 
-// Payment Callback (Webhook from Payloqa)
+// Payment Callback (Webhook from Payloqa — event: payment.status_changed)
 app.post('/api/payments/webhook', async (req, res) => {
   try {
     console.log('📨 Webhook received:', req.body);
 
-    const { status, amount, metadata } = req.body;
+    const payload = req.body?.data || req.body;
+    const event = req.body?.event || payload?.event || 'payment.status_changed';
+    const status = payload?.status || req.body?.status;
+    const amount = payload?.amount ?? req.body?.amount;
+    const metadata = payload?.metadata || req.body?.metadata || {};
+    const paymentId = payload?.payment_id || req.body?.payment_id;
 
-    console.log('Payment status:', status, 'User ID:', metadata?.user_id);
+    console.log('Payment event:', event, 'status:', status, 'payment_id:', paymentId, 'user_id:', metadata?.user_id);
 
     if (status === 'completed') {
       const user = await User.findById(metadata.user_id);
 
       if (!user) {
         console.error('❌ User not found:', metadata.user_id);
-        return res.status(404).json({ success: false, error: 'User not found' });
+        return res.status(200).json({ success: true, message: 'User not found — acknowledged' });
       }
 
       const numAmount = parseFloat(amount);
-      const paymentRef = req.body.payment_id || req.body.reference || metadata?.order_reference;
+      const paymentRef = paymentId || metadata?.order_reference;
 
       const existing = paymentRef
         ? await Transaction.findOne({ reference: paymentRef })
@@ -866,7 +871,6 @@ app.post('/api/payments/webhook', async (req, res) => {
         console.log(`ℹ️ Deposit already recorded for reference ${paymentRef}`);
       }
 
-      // Send deposit confirmation SMS
       try {
         await payloqaAPI.sendSMS(
           user.phone,
@@ -875,18 +879,16 @@ app.post('/api/payments/webhook', async (req, res) => {
       } catch (smsError) {
         console.error('❌ Deposit SMS failed:', smsError);
       }
-
-      res.status(200).json({ success: true, message: 'Payment processed' });
     } else if (status === 'failed') {
-      console.log('❌ Payment failed');
-      res.status(200).json({ success: true, message: 'Payment failed' });
+      console.log('❌ Payment failed:', paymentId);
     } else {
-      console.log('⏳ Payment still processing');
-      res.status(200).json({ success: true, message: 'Payment processing' });
+      console.log('⏳ Payment update:', status);
     }
+
+    res.status(200).json({ success: true, message: 'Webhook acknowledged' });
   } catch (error) {
     console.error('❌ Webhook error:', error);
-    res.status(500).json({ success: false, error: 'Callback processing failed' });
+    res.status(200).json({ success: true, message: 'Webhook acknowledged with error logged' });
   }
 });
 
