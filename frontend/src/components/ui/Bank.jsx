@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { API } from '../../api-helper';
 import { PaymentWidget } from '@payloqa/payment-widget';
@@ -204,18 +203,13 @@ export const BankView = ({ user, onUpdateUser }) => {
     }
   };
 
-  const paymentPortal = paymentConfig && isOpen && typeof document !== 'undefined'
-    ? createPortal(
-        <div className="payloqa-widget-portal">
-          <PaymentWidget
-            config={paymentConfig}
-            isOpen={isOpen}
-            onClose={closePaymentWidget}
-          />
-        </div>,
-        document.body
-      )
-    : null;
+  const paymentWidget = paymentConfig ? (
+    <PaymentWidget
+      config={paymentConfig}
+      isOpen={isOpen}
+      onClose={closePaymentWidget}
+    />
+  ) : null;
 
   return (
     <>
@@ -315,7 +309,7 @@ export const BankView = ({ user, onUpdateUser }) => {
         </div>
       </div>
       </motion.div>
-      {paymentPortal}
+      {paymentWidget}
     </>
   );
 };

@@ -3375,72 +3375,42 @@ body.payment-widget-open .game-main {
   margin-top: 10px;
 }
 
-/* Payloqa payment widget — render above all casino glass layers */
-.payloqa-widget-portal {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483000;
-  isolation: isolate;
+/* Payloqa widget portals itself to document.body — do not wrap in a full-screen overlay */
+body > .payloqa-payment-widget {
+  z-index: 100000 !important;
+  pointer-events: auto !important;
 }
 
 .payloqa-payment-widget {
   color: #111827;
   -webkit-text-fill-color: initial;
+  pointer-events: auto !important;
+}
+
+.payloqa-payment-widget input,
+.payloqa-payment-widget textarea,
+.payloqa-payment-widget button,
+.payloqa-payment-widget select,
+.payloqa-payment-widget [role='button'],
+.payloqa-payment-widget [class*='-control'] {
+  pointer-events: auto !important;
+}
+
+.payloqa-payment-widget input,
+.payloqa-payment-widget textarea,
+.payloqa-payment-widget [class*='-input'] input {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 .payloqa-payment-widget .payment-widget-modal {
-  overflow: visible !important;
+  pointer-events: auto !important;
 }
 
-.payloqa-payment-widget .overflow-hidden,
-.payloqa-payment-widget .overflow-y-auto {
-  overflow: visible !important;
-}
-
-.payloqa-payment-widget [class*='-control'],
-.payloqa-payment-widget [class*='__control'] {
-  background-color: #ffffff !important;
-  border-color: #d1d5db !important;
-  min-height: 44px !important;
-  color: #111827 !important;
-}
-
-.payloqa-payment-widget [class*='-singleValue'],
-.payloqa-payment-widget [class*='-placeholder'],
-.payloqa-payment-widget [class*='-input'] input {
-  color: #111827 !important;
-}
-
-.payloqa-payment-widget [class*='-menu'],
-.payloqa-payment-widget [class*='__menu'],
+/* React-select menus also portal to body */
 body > div[id*='react-select'] {
-  z-index: 2147483647 !important;
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border: 1px solid #d1d5db !important;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18) !important;
-}
-
-.payloqa-payment-widget [class*='-option'],
-.payloqa-payment-widget [class*='__option'] {
-  color: #111827 !important;
-  background-color: #ffffff !important;
-}
-
-.payloqa-payment-widget [class*='-option'][aria-selected='true'],
-.payloqa-payment-widget [class*='__option--is-selected'] {
-  background-color: #fef3c7 !important;
-  color: #111827 !important;
-}
-
-.payloqa-payment-widget [class*='-option']:hover,
-.payloqa-payment-widget [class*='__option--is-focused'] {
-  background-color: #fff7d6 !important;
-  color: #111827 !important;
-}
-
-.payloqa-payment-widget .fixed {
-  z-index: 2147483000 !important;
+  z-index: 100001 !important;
+  pointer-events: auto !important;
 }
 
 /* Payloqa payment widget text — keep readable over dark casino theme */
