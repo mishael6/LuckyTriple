@@ -3310,6 +3310,22 @@ textarea {
   margin-top: 10px;
 }
 
+/* Payloqa payment widget — keep modal readable over dark casino theme */
+.payloqa-payment-widget {
+  color: #111827;
+  -webkit-text-fill-color: initial;
+}
+
+.payloqa-payment-widget h1,
+.payloqa-payment-widget h2,
+.payloqa-payment-widget h3,
+.payloqa-payment-widget h4,
+.payloqa-payment-widget p,
+.payloqa-payment-widget label,
+.payloqa-payment-widget span {
+  -webkit-text-fill-color: initial;
+}
+
 .preset-btn {
   padding: 6px 12px;
   font-size: 12px;

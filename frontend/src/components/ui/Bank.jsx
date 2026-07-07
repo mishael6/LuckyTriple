@@ -1,38 +1,35 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { API } from '../../api-helper';
 import { PaymentWidget } from '@payloqa/payment-widget';
-import '@payloqa/payment-widget/styles';
+import '@payloqa/payment-widget/dist/payment-widget.css';
+
+const isHttpsUrl = (url) => {
+  try {
+    return new URL(url).protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
 
 export const BankView = ({ user, onUpdateUser }) => {
   const [action, setAction] = useState('deposit');
   const [amount, setAmount] = useState('');
-  const [network, setNetwork] = useState('mtn');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('error');
   const [isOpen, setIsOpen] = useState(false);
-
-  const paymentConfig = {
-    apiKey: import.meta.env.VITE_PAYMENT_API_KEY,
-    platformId: import.meta.env.VITE_PAYMENT_PLATFORM_ID,
-    amount: Number(amount),
-    network,
-    currency: 'GHS',
-    primaryColor: '#f0a500',
-    displayMode: 'modal',
-    redirect_url: import.meta.env.VITE_REDIRECT_URL,
-    webhookUrl: import.meta.env.VITE_API_URL + '/payments/webhook',
-    orderId: `ORDER-${Date.now()}`,
-    metadata: {
-      order_reference: `ORD-${Date.now()}`,
-      user_id: user?._id,
-    },
-  };
+  const [paymentConfig, setPaymentConfig] = useState(null);
 
   const showMessage = (text, type = 'error') => {
     setMessage(text);
     setMessageType(type);
+  };
+
+  const closePaymentWidget = () => {
+    setIsOpen(false);
+    setPaymentConfig(null);
   };
 
   if (!user) {
@@ -46,24 +43,76 @@ export const BankView = ({ user, onUpdateUser }) => {
     );
   }
 
-  const handleDeposit = async () => {
+  const handleDeposit = () => {
     const depositAmount = parseFloat(amount);
     if (!depositAmount || depositAmount <= 0) {
       showMessage('Please enter a valid amount');
       return;
     }
 
-    setLoading(true);
-    setMessage('');
+    const apiKey = import.meta.env.VITE_PAYMENT_API_KEY;
+    const platformId = import.meta.env.VITE_PAYMENT_PLATFORM_ID;
+    const redirectUrl = import.meta.env.VITE_REDIRECT_URL;
+    const webhookUrl = `${import.meta.env.VITE_API_URL}/payments/webhook`;
 
-    try {
-      setIsOpen(true);
-    } catch (error) {
-      console.error('Deposit error:', error);
-      showMessage(error.response?.data?.error || 'Failed to initiate deposit');
-    } finally {
-      setLoading(false);
+    if (!apiKey || !platformId) {
+      showMessage('Payment is not configured. Please contact support.');
+      return;
     }
+
+    if (!redirectUrl || !isHttpsUrl(redirectUrl)) {
+      showMessage('Payment redirect URL must be a valid HTTPS address.');
+      return;
+    }
+
+    if (!webhookUrl.startsWith('https://')) {
+      showMessage('Payment webhook URL must use HTTPS.');
+      return;
+    }
+
+    setMessage('');
+    setPaymentConfig({
+      apiKey,
+      platformId,
+      amount: depositAmount,
+      currency: 'GHS',
+      primaryColor: '#f0a500',
+      displayMode: 'modal',
+      redirect_url: redirectUrl,
+      webhookUrl,
+      orderId: `ORDER-${Date.now()}`,
+      metadata: {
+        order_reference: `ORD-${Date.now()}`,
+        user_id: user._id,
+      },
+      onSuccess: async (result) => {
+        closePaymentWidget();
+
+        try {
+          const depositResult = await API.recordDeposit({
+            amount: depositAmount,
+            paymentId: result.payment_id,
+            reference: result.reference || result.payment_id,
+          });
+
+          if (depositResult.success) {
+            showMessage('Payment successful. Balance updated.', 'success');
+            setAmount('');
+            if (onUpdateUser && depositResult.user) {
+              onUpdateUser(depositResult.user);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to record deposit:', error);
+          showMessage('Payment received but balance update failed. Contact support.');
+        }
+      },
+      onError: (error) => {
+        closePaymentWidget();
+        showMessage(error?.message || 'Payment failed. Please try again.');
+      },
+    });
+    setIsOpen(true);
   };
 
   const handleWithdraw = async () => {
@@ -95,6 +144,14 @@ export const BankView = ({ user, onUpdateUser }) => {
       setLoading(false);
     }
   };
+
+  const paymentWidget = paymentConfig ? (
+    <PaymentWidget
+      config={paymentConfig}
+      isOpen={isOpen}
+      onClose={closePaymentWidget}
+    />
+  ) : null;
 
   return (
     <motion.div
@@ -131,17 +188,6 @@ export const BankView = ({ user, onUpdateUser }) => {
         </div>
 
         <div className="bank-form">
-          {action === 'deposit' && (
-            <div className="input-group">
-              <label>Mobile Network</label>
-              <select value={network} onChange={(e) => setNetwork(e.target.value)}>
-                <option value="mtn">MTN Mobile Money</option>
-                <option value="vodafone">Vodafone Cash</option>
-                <option value="airteltigo">AirtelTigo Money</option>
-              </select>
-            </div>
-          )}
-
           <div className="input-group">
             <label>Amount (GHS)</label>
             <input
@@ -164,48 +210,22 @@ export const BankView = ({ user, onUpdateUser }) => {
             type="button"
             className="bank-action-btn"
             onClick={action === 'deposit' ? handleDeposit : handleWithdraw}
-            disabled={loading}
+            disabled={loading || (action === 'deposit' && isOpen)}
           >
             {loading ? 'Processing...' : (action === 'deposit' ? 'Deposit Funds' : 'Request Withdrawal')}
           </button>
 
           <div className="bank-info">
             {action === 'deposit'
-              ? 'Secure payments via Payloqa. MTN, Vodafone, and AirtelTigo supported.'
+              ? 'Secure payments via Payloqa. You will choose your network and phone number in the payment window.'
               : 'Withdrawals are processed after admin approval, typically within 24 hours.'}
           </div>
         </div>
-
-        <PaymentWidget
-          config={paymentConfig}
-          isOpen={isOpen}
-          onClose={() => setIsOpen(false)}
-          onSuccess={async (result) => {
-            console.log('Payment successful:', result);
-            setIsOpen(false);
-
-            try {
-              const depositResult = await API.recordDeposit({
-                amount: Number(amount),
-                network,
-                paymentId: result.transactionId || result.id,
-                reference: result.reference,
-              });
-
-              if (depositResult.success) {
-                showMessage('Payment successful. Balance updated.', 'success');
-                setAmount('');
-                if (onUpdateUser && depositResult.user) {
-                  onUpdateUser(depositResult.user);
-                }
-              }
-            } catch (error) {
-              console.error('Failed to record deposit:', error);
-              showMessage('Payment received but balance update failed. Contact support.');
-            }
-          }}
-        />
       </div>
+
+      {paymentWidget && typeof document !== 'undefined'
+        ? createPortal(paymentWidget, document.body)
+        : null}
     </motion.div>
   );
 };

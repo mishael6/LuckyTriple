@@ -43,6 +43,16 @@ export const API = {
     return response.data;
   },
 
+  recordDeposit: async ({ amount, network, paymentId, reference }) => {
+    const response = await axios.post('/payments/deposit', {
+      amount,
+      network,
+      paymentId,
+      reference,
+    });
+    return response.data;
+  },
+
   verifyPayment: async (paymentId) => {
     const response = await axios.get(`/payments/verify/${paymentId}`);
     return response.data;
