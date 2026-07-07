@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { API } from '../../api-helper';
@@ -31,6 +31,13 @@ export const BankView = ({ user, onUpdateUser }) => {
     setIsOpen(false);
     setPaymentConfig(null);
   };
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    document.body.classList.add('payment-widget-open');
+    return () => document.body.classList.remove('payment-widget-open');
+  }, [isOpen]);
 
   if (!user) {
     return (
@@ -145,22 +152,28 @@ export const BankView = ({ user, onUpdateUser }) => {
     }
   };
 
-  const paymentWidget = paymentConfig ? (
-    <PaymentWidget
-      config={paymentConfig}
-      isOpen={isOpen}
-      onClose={closePaymentWidget}
-    />
-  ) : null;
+  const paymentPortal = paymentConfig && isOpen && typeof document !== 'undefined'
+    ? createPortal(
+        <div className="payloqa-widget-portal">
+          <PaymentWidget
+            config={paymentConfig}
+            isOpen={isOpen}
+            onClose={closePaymentWidget}
+          />
+        </div>,
+        document.body
+      )
+    : null;
 
   return (
-    <motion.div
-      className="bank-view"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.35 }}
-    >
+    <>
+      <motion.div
+        className={`bank-view${isOpen ? ' bank-view--payment-open' : ''}`}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.35 }}
+      >
       <div className="bank-card bank-card--polished">
         <h3>Your Wallet</h3>
         <p className="game-subtitle">Deposit with Payloqa mobile money. Withdraw anytime.</p>
@@ -222,10 +235,8 @@ export const BankView = ({ user, onUpdateUser }) => {
           </div>
         </div>
       </div>
-
-      {paymentWidget && typeof document !== 'undefined'
-        ? createPortal(paymentWidget, document.body)
-        : null}
-    </motion.div>
+      </motion.div>
+      {paymentPortal}
+    </>
   );
 };

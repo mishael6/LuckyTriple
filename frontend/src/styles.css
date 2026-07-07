@@ -887,6 +887,12 @@ body {
   border-radius: 8px;
 }
 
+.bank-view--payment-open .bank-card {
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
+}
+
 /* ============================================================================
    ADMIN DASHBOARD STYLES
    ============================================================================ */
@@ -2361,6 +2367,11 @@ textarea {
   min-height: 0;
 }
 
+.game-main--payment-open,
+body.payment-widget-open .game-main {
+  z-index: 0;
+}
+
 /* Animated casino background */
 .casino-bg {
   position: fixed;
@@ -3310,12 +3321,32 @@ textarea {
   margin-top: 10px;
 }
 
-/* Payloqa payment widget — keep modal readable over dark casino theme */
+/* Payloqa payment widget — render above all casino glass layers */
+.payloqa-widget-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.payloqa-widget-portal > * {
+  pointer-events: auto;
+}
+
 .payloqa-payment-widget {
   color: #111827;
   -webkit-text-fill-color: initial;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
 }
 
+.payloqa-payment-widget .fixed {
+  z-index: 2147483000 !important;
+}
+
+/* Payloqa payment widget text — keep readable over dark casino theme */
 .payloqa-payment-widget h1,
 .payloqa-payment-widget h2,
 .payloqa-payment-widget h3,
