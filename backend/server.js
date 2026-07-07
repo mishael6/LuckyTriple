@@ -2800,7 +2800,7 @@ app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
     user.phone = formattedPhone;
     await user.save();
 
-    const redirectUrl = process.env.FRONTEND_URL || 'https://luckytriple.netlify.app';
+    const redirectUrl = process.env.FRONTEND_URL || 'https://luckytriplegame.com';
     const result = await payloqaPaymentsAPI.createPayment({
       amount: Number(amount),
       currency: 'GHS',

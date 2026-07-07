@@ -1,259 +1,524 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { PaymentWidget } from '@payloqa/payment-widget';
-import '@payloqa/payment-widget/styles';
-import { API } from '../../api-helper';
-
-const PAYLOQA_PAYMENTS_URL =
-  import.meta.env.VITE_PAYLOQA_PAYMENTS_URL || 'https://payments.payloqa.com/api/v1/payments';
-
-const isHttpsUrl = (url) => {
-  try {
-    return new URL(url).protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
-
-export const BankView = ({ user, onUpdateUser }) => {
-  const [action, setAction] = useState('deposit');
-  const [amount, setAmount] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('error');
-  const [isOpen, setIsOpen] = useState(false);
-  const [paymentConfig, setPaymentConfig] = useState(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('payment-widget-open');
-    } else {
-      document.body.classList.remove('payment-widget-open');
-    }
-
-    return () => {
-      document.body.classList.remove('payment-widget-open');
-    };
-  }, [isOpen]);
-
-  const showMessage = (text, type = 'error') => {
-    setMessage(text);
-    setMessageType(type);
-  };
-
-  const closePaymentWidget = () => {
-    setIsOpen(false);
-    setPaymentConfig(null);
-  };
-
-  const handlePaymentSuccess = async (result) => {
-    closePaymentWidget();
-
-    if (result?.status !== 'completed') {
-      showMessage('Payment is still processing. Your balance will update shortly.');
-      return;
-    }
-
-    const depositAmount = Number(result.amount) || parseFloat(amount);
-
-    try {
-      const depositResult = await API.recordDeposit({
-        amount: depositAmount,
-        paymentId: result.payment_id,
-        reference: result.reference || result.payment_id,
-        network: result.network,
-      });
-
-      if (depositResult.success) {
-        showMessage('Payment successful. Balance updated.', 'success');
-        setAmount('');
-        if (onUpdateUser && depositResult.user) {
-          onUpdateUser(depositResult.user);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to record deposit:', error);
-      showMessage('Payment received but balance update failed. Contact support.');
-    }
-  };
-
-  const handleDeposit = () => {
-    const depositAmount = parseFloat(amount);
-    if (!depositAmount || depositAmount <= 0) {
-      showMessage('Please enter a valid amount');
-      return;
-    }
-
-    const apiKey = import.meta.env.VITE_PAYMENT_API_KEY;
-    const platformId = import.meta.env.VITE_PAYMENT_PLATFORM_ID;
-    const redirectUrl = import.meta.env.VITE_REDIRECT_URL;
-    const webhookUrl = `${import.meta.env.VITE_API_URL}/payments/webhook`;
-
-    if (!apiKey || !platformId) {
-      showMessage('Payment is not configured. Please contact support.');
-      return;
-    }
-
-    if (!redirectUrl || !isHttpsUrl(redirectUrl)) {
-      showMessage('Payment redirect URL must be a valid HTTPS address.');
-      return;
-    }
-
-    if (!webhookUrl.startsWith('https://')) {
-      showMessage('Payment webhook URL must use HTTPS.');
-      return;
-    }
-
-    const orderId = `ORDER-${Date.now()}`;
-
-    setMessage('');
-    setPaymentConfig({
-      apiKey,
-      platformId,
-      apiUrl: PAYLOQA_PAYMENTS_URL,
-      amount: depositAmount,
-      currency: 'GHS',
-      primaryColor: '#f0a500',
-      displayMode: 'modal',
-      redirect_url: redirectUrl,
-      webhookUrl,
-      orderId,
-      metadata: {
-        order_reference: orderId,
-        user_id: user._id,
-        customer_email: user.email,
-      },
-      onSuccess: handlePaymentSuccess,
-      onError: (error) => {
-        closePaymentWidget();
-        showMessage(error?.message || 'Payment failed. Please try again.');
-      },
-    });
-    setIsOpen(true);
-  };
-
-  const handleWithdraw = async () => {
-    const withdrawAmount = parseFloat(amount);
-    if (!withdrawAmount || withdrawAmount <= 0) {
-      showMessage('Please enter a valid amount');
-      return;
-    }
-
-    if (withdrawAmount > user.balance) {
-      showMessage('Insufficient balance');
-      return;
-    }
-
-    setLoading(true);
-    setMessage('');
-
-    try {
-      const result = await API.requestWithdrawal(withdrawAmount, user.phone, 'mtn');
-
-      if (result.success) {
-        showMessage('Withdrawal request submitted. Awaiting admin approval.', 'success');
-        setAmount('');
-        if (onUpdateUser && result.user) {
-          onUpdateUser(result.user);
-        }
-      }
-    } catch (error) {
-      console.error('Withdrawal error:', error);
-      showMessage(error.response?.data?.error || 'Failed to request withdrawal');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!user) {
-    return (
-      <div className="bank-view">
-        <div className="bank-card">
-          <h3>Wallet unavailable</h3>
-          <p className="game-subtitle">User data not loaded. Please refresh the page.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <motion.div
-      className={`bank-view${isOpen ? ' bank-view--payment-open' : ''}`}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.35 }}
-    >
-      <div className="bank-card bank-card--polished">
-        <h3>Your Wallet</h3>
-        <p className="game-subtitle">Deposit with Payloqa mobile money. Withdraw anytime.</p>
-
-        <div className="bank-balance">
-          <div className="balance-label">Current Balance</div>
-          <div className="balance-amount">GHS {user?.balance?.toFixed(2) || '0.00'}</div>
-        </div>
-
-        <div className="bank-tabs">
-          <button
-            type="button"
-            className={action === 'deposit' ? 'active' : ''}
-            onClick={() => setAction('deposit')}
-          >
-            Deposit
-          </button>
-          <button
-            type="button"
-            className={action === 'withdraw' ? 'active' : ''}
-            onClick={() => setAction('withdraw')}
-          >
-            Withdraw
-          </button>
-        </div>
-
-        <div className="bank-form">
-          <div className="input-group">
-            <label>Amount (GHS)</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              min="1"
-              step="0.01"
-            />
-          </div>
-
-          {message && (
-            <div className={`bank-message ${messageType}`}>
-              {message}
-            </div>
-          )}
-
-          <button
-            type="button"
-            className="bank-action-btn"
-            onClick={action === 'deposit' ? handleDeposit : handleWithdraw}
-            disabled={loading || (action === 'deposit' && isOpen)}
-          >
-            {loading ? 'Processing...' : (action === 'deposit' ? 'Deposit Funds' : 'Request Withdrawal')}
-          </button>
-
-          <div className="bank-info">
-            {action === 'deposit'
-              ? 'Secure payments via Payloqa. Enter your phone (+233) and network in the payment window.'
-              : 'Withdrawals are processed after admin approval, typically within 24 hours.'}
-          </div>
-        </div>
-      </div>
-
-      {paymentConfig && (
-        <PaymentWidget
-          config={paymentConfig}
-          isOpen={isOpen}
-          onClose={closePaymentWidget}
-        />
-      )}
-    </motion.div>
-  );
-};
-
+import { useState, useEffect } from 'react';
+
+import { motion } from 'framer-motion';
+
+import { PaymentWidget } from '@payloqa/payment-widget';
+
+import '@payloqa/payment-widget/styles';
+
+import { API } from '../../api-helper';
+
+
+
+const PAYLOQA_PAYMENTS_URL =
+
+  import.meta.env.VITE_PAYLOQA_PAYMENTS_URL || 'https://payments.payloqa.com/api/v1/payments';
+
+
+
+const isHttpsUrl = (url) => {
+
+  try {
+
+    return new URL(url).protocol === 'https:';
+
+  } catch {
+
+    return false;
+
+  }
+
+};
+
+
+
+const getRedirectUrl = () => {
+  if (typeof window !== 'undefined' && isHttpsUrl(window.location.origin)) {
+    return window.location.origin;
+  }
+  return import.meta.env.VITE_REDIRECT_URL;
+};
+
+export const BankView = ({ user, onUpdateUser }) => {
+
+  const [action, setAction] = useState('deposit');
+
+  const [amount, setAmount] = useState('');
+
+  const [loading, setLoading] = useState(false);
+
+  const [message, setMessage] = useState('');
+
+  const [messageType, setMessageType] = useState('error');
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [paymentConfig, setPaymentConfig] = useState(null);
+
+
+
+  useEffect(() => {
+
+    if (isOpen) {
+
+      document.body.classList.add('payment-widget-open');
+
+    } else {
+
+      document.body.classList.remove('payment-widget-open');
+
+    }
+
+
+
+    return () => {
+
+      document.body.classList.remove('payment-widget-open');
+
+    };
+
+  }, [isOpen]);
+
+
+
+  const showMessage = (text, type = 'error') => {
+
+    setMessage(text);
+
+    setMessageType(type);
+
+  };
+
+
+
+  const closePaymentWidget = () => {
+
+    setIsOpen(false);
+
+    setPaymentConfig(null);
+
+  };
+
+
+
+  const handlePaymentSuccess = async (result) => {
+
+    closePaymentWidget();
+
+
+
+    if (result?.status !== 'completed') {
+
+      showMessage('Payment is still processing. Your balance will update shortly.');
+
+      return;
+
+    }
+
+
+
+    const depositAmount = Number(result.amount) || parseFloat(amount);
+
+
+
+    try {
+
+      const depositResult = await API.recordDeposit({
+
+        amount: depositAmount,
+
+        paymentId: result.payment_id,
+
+        reference: result.reference || result.payment_id,
+
+        network: result.network,
+
+      });
+
+
+
+      if (depositResult.success) {
+
+        showMessage('Payment successful. Balance updated.', 'success');
+
+        setAmount('');
+
+        if (onUpdateUser && depositResult.user) {
+
+          onUpdateUser(depositResult.user);
+
+        }
+
+      }
+
+    } catch (error) {
+
+      console.error('Failed to record deposit:', error);
+
+      showMessage('Payment received but balance update failed. Contact support.');
+
+    }
+
+  };
+
+
+
+  const handleDeposit = () => {
+
+    const depositAmount = parseFloat(amount);
+
+    if (!depositAmount || depositAmount <= 0) {
+
+      showMessage('Please enter a valid amount');
+
+      return;
+
+    }
+
+
+
+    const apiKey = import.meta.env.VITE_PAYMENT_API_KEY;
+
+    const platformId = import.meta.env.VITE_PAYMENT_PLATFORM_ID;
+
+    const redirectUrl = getRedirectUrl();
+
+    const webhookUrl = `${import.meta.env.VITE_API_URL}/payments/webhook`;
+
+
+
+    if (!apiKey || !platformId) {
+
+      showMessage('Payment is not configured. Please contact support.');
+
+      return;
+
+    }
+
+
+
+    if (!redirectUrl || !isHttpsUrl(redirectUrl)) {
+
+      showMessage('Payment redirect URL must be a valid HTTPS address.');
+
+      return;
+
+    }
+
+
+
+    if (!webhookUrl.startsWith('https://')) {
+
+      showMessage('Payment webhook URL must use HTTPS.');
+
+      return;
+
+    }
+
+
+
+    const orderId = `ORDER-${Date.now()}`;
+
+
+
+    setMessage('');
+
+    setPaymentConfig({
+
+      apiKey,
+
+      platformId,
+
+      apiUrl: PAYLOQA_PAYMENTS_URL,
+
+      amount: depositAmount,
+
+      currency: 'GHS',
+
+      primaryColor: '#f0a500',
+
+      displayMode: 'modal',
+
+      redirect_url: redirectUrl,
+
+      webhookUrl,
+
+      orderId,
+
+      metadata: {
+
+        order_reference: orderId,
+
+        user_id: user._id,
+
+        customer_email: user.email,
+
+      },
+
+      onSuccess: handlePaymentSuccess,
+
+      onError: (error) => {
+
+        closePaymentWidget();
+
+        showMessage(error?.message || 'Payment failed. Please try again.');
+
+      },
+
+    });
+
+    setIsOpen(true);
+
+  };
+
+
+
+  const handleWithdraw = async () => {
+
+    const withdrawAmount = parseFloat(amount);
+
+    if (!withdrawAmount || withdrawAmount <= 0) {
+
+      showMessage('Please enter a valid amount');
+
+      return;
+
+    }
+
+
+
+    if (withdrawAmount > user.balance) {
+
+      showMessage('Insufficient balance');
+
+      return;
+
+    }
+
+
+
+    setLoading(true);
+
+    setMessage('');
+
+
+
+    try {
+
+      const result = await API.requestWithdrawal(withdrawAmount, user.phone, 'mtn');
+
+
+
+      if (result.success) {
+
+        showMessage('Withdrawal request submitted. Awaiting admin approval.', 'success');
+
+        setAmount('');
+
+        if (onUpdateUser && result.user) {
+
+          onUpdateUser(result.user);
+
+        }
+
+      }
+
+    } catch (error) {
+
+      console.error('Withdrawal error:', error);
+
+      showMessage(error.response?.data?.error || 'Failed to request withdrawal');
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+
+
+  if (!user) {
+
+    return (
+
+      <div className="bank-view">
+
+        <div className="bank-card">
+
+          <h3>Wallet unavailable</h3>
+
+          <p className="game-subtitle">User data not loaded. Please refresh the page.</p>
+
+        </div>
+
+      </div>
+
+    );
+
+  }
+
+
+
+  return (
+
+    <motion.div
+
+      className={`bank-view${isOpen ? ' bank-view--payment-open' : ''}`}
+
+      initial={{ opacity: 0, y: 12 }}
+
+      animate={{ opacity: 1, y: 0 }}
+
+      exit={{ opacity: 0, y: -8 }}
+
+      transition={{ duration: 0.35 }}
+
+    >
+
+      <div className="bank-card bank-card--polished">
+
+        <h3>Your Wallet</h3>
+
+        <p className="game-subtitle">Deposit with Payloqa mobile money. Withdraw anytime.</p>
+
+
+
+        <div className="bank-balance">
+
+          <div className="balance-label">Current Balance</div>
+
+          <div className="balance-amount">GHS {user?.balance?.toFixed(2) || '0.00'}</div>
+
+        </div>
+
+
+
+        <div className="bank-tabs">
+
+          <button
+
+            type="button"
+
+            className={action === 'deposit' ? 'active' : ''}
+
+            onClick={() => setAction('deposit')}
+
+          >
+
+            Deposit
+
+          </button>
+
+          <button
+
+            type="button"
+
+            className={action === 'withdraw' ? 'active' : ''}
+
+            onClick={() => setAction('withdraw')}
+
+          >
+
+            Withdraw
+
+          </button>
+
+        </div>
+
+
+
+        <div className="bank-form">
+
+          <div className="input-group">
+
+            <label>Amount (GHS)</label>
+
+            <input
+
+              type="number"
+
+              value={amount}
+
+              onChange={(e) => setAmount(e.target.value)}
+
+              placeholder="0.00"
+
+              min="1"
+
+              step="0.01"
+
+            />
+
+          </div>
+
+
+
+          {message && (
+
+            <div className={`bank-message ${messageType}`}>
+
+              {message}
+
+            </div>
+
+          )}
+
+
+
+          <button
+
+            type="button"
+
+            className="bank-action-btn"
+
+            onClick={action === 'deposit' ? handleDeposit : handleWithdraw}
+
+            disabled={loading || (action === 'deposit' && isOpen)}
+
+          >
+
+            {loading ? 'Processing...' : (action === 'deposit' ? 'Deposit Funds' : 'Request Withdrawal')}
+
+          </button>
+
+
+
+          <div className="bank-info">
+
+            {action === 'deposit'
+
+              ? 'Secure payments via Payloqa. Enter your phone (+233) and network in the payment window.'
+
+              : 'Withdrawals are processed after admin approval, typically within 24 hours.'}
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      {paymentConfig && (
+
+        <PaymentWidget
+
+          config={paymentConfig}
+
+          isOpen={isOpen}
+
+          onClose={closePaymentWidget}
+
+        />
+
+      )}
+
+    </motion.div>
+
+  );
+
+};
+
+
