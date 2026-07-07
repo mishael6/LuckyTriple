@@ -19,11 +19,14 @@ app.use(express.json());
 // PAYLOQA API CONFIGURATION
 // ============================================================================
 
+const PAYLOQA_API_BASE = (process.env.PAYLOQA_API_BASE_URL || 'https://api.payloqa.com').replace(/\/$/, '');
+
 const PAYLOQA_CONFIG = {
   apiKey: process.env.PAYLOQA_API_KEY || 'pk_live_of502pjkel',
   platformId: process.env.PAYLOQA_PLATFORM_ID || 'plat_xvadsq3rx0f',
-  smsBaseURL: 'https://sms.payloqa.com/api/v1',
-  paymentsBaseURL: 'https://payments.payloqa.com/api/v1/payments'
+  apiBaseURL: PAYLOQA_API_BASE,
+  smsBaseURL: process.env.PAYLOQA_SMS_URL || 'https://sms.payloqa.com/api/v1',
+  paymentsBaseURL: process.env.PAYLOQA_PAYMENTS_URL || `${PAYLOQA_API_BASE}/v1/payments`
 };
 
 const payloqaAPI = {

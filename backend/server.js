@@ -40,11 +40,14 @@ app.use(express.json());
 // PAYLOQA API CONFIGURATION
 // ============================================================================
 
+const PAYLOQA_API_BASE = (process.env.PAYLOQA_API_BASE_URL || 'https://api.payloqa.com').replace(/\/$/, '');
+
 const PAYLOQA_CONFIG = {
   apiKey: process.env.PAYLOQA_API_KEY || 'pk_live_of502pjkel',
   platformId: process.env.PAYLOQA_PLATFORM_ID || 'plat_xvadsq3rx0f',
-  smsBaseURL: 'https://sms.payloqa.com/api/v1',
-  paymentsBaseURL: 'https://payments.payloqa.com/api/v1/payments'
+  apiBaseURL: PAYLOQA_API_BASE,
+  smsBaseURL: process.env.PAYLOQA_SMS_URL || 'https://sms.payloqa.com/api/v1',
+  paymentsBaseURL: process.env.PAYLOQA_PAYMENTS_URL || `${PAYLOQA_API_BASE}/v1/payments`,
 };
 
 const VALID_WALLET_NETWORKS = ['mtn', 'vodafone', 'airteltigo'];
@@ -77,24 +80,31 @@ const getPaymentsWebhookUrl = () => {
 const payloqaPaymentsAPI = {
   request: async (path, options = {}) => {
     const url = `${PAYLOQA_CONFIG.paymentsBaseURL}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': PAYLOQA_CONFIG.apiKey,
-        'X-Platform-Id': PAYLOQA_CONFIG.platformId,
-        ...(options.headers || {}),
-      },
-    });
+    const method = options.method || 'GET';
 
-    let data;
     try {
-      data = await response.json();
-    } catch {
-      data = { success: false, message: `Invalid response from Payloqa (${response.status})` };
-    }
+      const response = await axios({
+        url,
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': PAYLOQA_CONFIG.apiKey,
+          'X-Platform-Id': PAYLOQA_CONFIG.platformId,
+          ...(options.headers || {}),
+        },
+        data: options.body ? JSON.parse(options.body) : undefined,
+        validateStatus: () => true,
+      });
 
-    return { ok: response.ok, status: response.status, data };
+      return {
+        ok: response.status >= 200 && response.status < 300,
+        status: response.status,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('Payloqa payments request failed:', url, error.message);
+      throw new Error(error.response?.data?.error?.message || error.response?.data?.message || error.message || 'Payloqa payment service unavailable');
+    }
   },
 
   createPayment: (payload) => payloqaPaymentsAPI.request('/create', {
@@ -2679,6 +2689,7 @@ mongoose.connect(MONGODB_URI)
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📡 API: http://localhost:${PORT}/api`);
+      console.log(`💳 Payloqa payments: ${PAYLOQA_CONFIG.paymentsBaseURL}`);
       console.log(`🌐 Webhook URL: ${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payments/webhook`);
     });
   })
