@@ -72,6 +72,11 @@ const formatGhanaPhone = (phone) => {
   return `+${formattedPhone}`;
 };
 
+const toPayloqaPhone = (phone) => {
+  const formatted = formatGhanaPhone(phone);
+  return formatted ? formatted.replace(/^\+/, '') : null;
+};
+
 const getPaymentsWebhookUrl = () => {
   const baseUrl = process.env.BACKEND_URL || process.env.BASE_URL || 'https://luckytriple-backend.onrender.com';
   return `${baseUrl.replace(/\/$/, '')}/api/payments/webhook`;
@@ -2776,6 +2781,7 @@ app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
     const { amount, phone, network } = req.body;
     const user = await User.findById(req.user.id);
     const formattedPhone = formatGhanaPhone(phone || user?.phone);
+    const payloqaPhone = toPayloqaPhone(phone || user?.phone);
     const paymentNetwork = (network || 'mtn').toLowerCase();
 
     if (!user) {
@@ -2786,7 +2792,7 @@ app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid amount' });
     }
 
-    if (!formattedPhone) {
+    if (!formattedPhone || !payloqaPhone) {
       return res.status(400).json({
         success: false,
         error: 'Enter a valid Ghana phone number (e.g. 024XXXXXXX)',
@@ -2805,7 +2811,7 @@ app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
       amount: Number(amount),
       currency: 'GHS',
       payment_method: 'mobile_money',
-      phone_number: formattedPhone,
+      phone_number: payloqaPhone,
       network: paymentNetwork,
       redirect_url: redirectUrl,
       webhook_url: getPaymentsWebhookUrl(),
@@ -2844,12 +2850,13 @@ app.post('/api/payments/verify-otp', authenticateToken, async (req, res) => {
   try {
     const { paymentId, phone, otpCode } = req.body;
     const formattedPhone = formatGhanaPhone(phone);
+    const payloqaPhone = toPayloqaPhone(phone);
 
     if (!paymentId) {
       return res.status(400).json({ success: false, error: 'Payment ID is required' });
     }
 
-    if (!formattedPhone) {
+    if (!formattedPhone || !payloqaPhone) {
       return res.status(400).json({ success: false, error: 'Valid phone number is required' });
     }
 
@@ -2858,7 +2865,7 @@ app.post('/api/payments/verify-otp', authenticateToken, async (req, res) => {
     }
 
     const result = await payloqaPaymentsAPI.verifyOTP(paymentId, {
-      phone_number: formattedPhone,
+      phone_number: payloqaPhone,
       otp_code: String(otpCode).trim(),
     });
 
@@ -2888,13 +2895,14 @@ app.post('/api/payments/resend-otp', authenticateToken, async (req, res) => {
   try {
     const { paymentId, phone } = req.body;
     const formattedPhone = formatGhanaPhone(phone);
+    const payloqaPhone = toPayloqaPhone(phone);
 
-    if (!paymentId || !formattedPhone) {
+    if (!paymentId || !formattedPhone || !payloqaPhone) {
       return res.status(400).json({ success: false, error: 'Payment ID and phone are required' });
     }
 
     const result = await payloqaPaymentsAPI.resendOTP(paymentId, {
-      phone_number: formattedPhone,
+      phone_number: payloqaPhone,
     });
 
     if (!result.ok || !result.data?.success) {

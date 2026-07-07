@@ -1,142 +1,162 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PaymentWidget } from '@payloqa/payment-widget';
-import '@payloqa/payment-widget/styles';
 import { API } from '../../api-helper';
 
-// Official Payloqa docs URL — api.payloqa.com does NOT resolve; never use it.
-const PAYLOQA_PAYMENTS_URL = 'https://payments.payloqa.com/api/v1/payments';
+const NETWORKS = [
+  { id: 'mtn', label: 'MTN Mobile Money' },
+  { id: 'vodafone', label: 'Telecel Cash' },
+  { id: 'airteltigo', label: 'AirtelTigo Money' },
+];
 
-const isHttpsUrl = (url) => {
-  try {
-    return new URL(url).protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
-
-const getRedirectUrl = () => {
-  if (typeof window !== 'undefined' && isHttpsUrl(window.location.origin)) {
-    return window.location.origin;
-  }
-  return import.meta.env.VITE_REDIRECT_URL;
-};
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const BankView = ({ user, onUpdateUser }) => {
   const [action, setAction] = useState('deposit');
   const [amount, setAmount] = useState('');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [network, setNetwork] = useState('mtn');
+  const [otpCode, setOtpCode] = useState('');
+  const [paymentId, setPaymentId] = useState(null);
+  const [depositStep, setDepositStep] = useState('form');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('error');
-  const [isOpen, setIsOpen] = useState(false);
-  const [paymentConfig, setPaymentConfig] = useState(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('payment-widget-open');
-    } else {
-      document.body.classList.remove('payment-widget-open');
-    }
-
-    return () => {
-      document.body.classList.remove('payment-widget-open');
-    };
-  }, [isOpen]);
 
   const showMessage = (text, type = 'error') => {
     setMessage(text);
     setMessageType(type);
   };
 
-  const closePaymentWidget = () => {
-    setIsOpen(false);
-    setPaymentConfig(null);
+  const resetDepositFlow = () => {
+    setPaymentId(null);
+    setOtpCode('');
+    setDepositStep('form');
   };
 
-  const handlePaymentSuccess = async (result) => {
-    closePaymentWidget();
+  const waitForPaymentCompletion = async (activePaymentId) => {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const statusResult = await API.getPaymentStatus(activePaymentId);
 
-    if (result?.status !== 'completed') {
-      showMessage('Payment is still processing. Your balance will update shortly.');
-      return;
-    }
-
-    const depositAmount = Number(result.amount) || parseFloat(amount);
-
-    try {
-      const depositResult = await API.recordDeposit({
-        amount: depositAmount,
-        paymentId: result.payment_id,
-        reference: result.reference || result.payment_id,
-        network: result.network,
-      });
-
-      if (depositResult.success) {
-        showMessage('Payment successful. Balance updated.', 'success');
-        setAmount('');
-        if (onUpdateUser && depositResult.user) {
-          onUpdateUser(depositResult.user);
-        }
+      if (!statusResult.success) {
+        throw new Error(statusResult.error || 'Could not check payment status');
       }
-    } catch (error) {
-      console.error('Failed to record deposit:', error);
-      showMessage('Payment received but balance update failed. Contact support.');
+
+      const status = statusResult.payment?.status;
+
+      if (status === 'completed') {
+        return statusResult.payment;
+      }
+
+      if (status === 'failed' || status === 'cancelled' || status === 'expired') {
+        throw new Error(`Payment ${status}. Please try again.`);
+      }
+
+      await sleep(2000);
     }
+
+    throw new Error('Payment is taking longer than expected. Check your MoMo app or try again.');
   };
 
-  const handleDeposit = () => {
+  const handleDeposit = async () => {
     const depositAmount = parseFloat(amount);
     if (!depositAmount || depositAmount <= 0) {
       showMessage('Please enter a valid amount');
       return;
     }
 
-    const apiKey = import.meta.env.VITE_PAYMENT_API_KEY;
-    const platformId = import.meta.env.VITE_PAYMENT_PLATFORM_ID;
-    const redirectUrl = getRedirectUrl();
-    const webhookUrl = `${import.meta.env.VITE_API_URL}/payments/webhook`;
-
-    if (!apiKey || !platformId) {
-      showMessage('Payment is not configured. Please contact support.');
+    if (!phone?.trim()) {
+      showMessage('Enter your mobile money phone number (e.g. 024XXXXXXX)');
       return;
     }
 
-    if (!redirectUrl || !isHttpsUrl(redirectUrl)) {
-      showMessage('Payment redirect URL must be a valid HTTPS address.');
-      return;
-    }
-
-    if (!webhookUrl.startsWith('https://')) {
-      showMessage('Payment webhook URL must use HTTPS.');
-      return;
-    }
-
-    const orderId = `ORDER-${Date.now()}`;
-
+    setLoading(true);
     setMessage('');
-    setPaymentConfig({
-      apiKey,
-      platformId,
-      apiUrl: PAYLOQA_PAYMENTS_URL,
-      amount: depositAmount,
-      currency: 'GHS',
-      primaryColor: '#f0a500',
-      displayMode: 'modal',
-      redirect_url: redirectUrl,
-      webhookUrl,
-      orderId,
-      metadata: {
-        order_reference: orderId,
-        user_id: user._id,
-        customer_email: user.email,
-      },
-      onSuccess: handlePaymentSuccess,
-      onError: (error) => {
-        closePaymentWidget();
-        showMessage(error?.message || 'Payment failed. Please try again.');
-      },
-    });
-    setIsOpen(true);
+
+    try {
+      const result = await API.initiatePayment(depositAmount, phone.trim(), network);
+
+      if (!result.success) {
+        showMessage(result.error || 'Failed to start payment');
+        return;
+      }
+
+      setPaymentId(result.paymentId);
+      setDepositStep('otp');
+      showMessage(result.message || 'OTP sent to your phone. Enter it below.', 'success');
+    } catch (error) {
+      console.error('Deposit initiate error:', error);
+      showMessage(error.response?.data?.error || 'Failed to start payment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!paymentId) {
+      showMessage('Start a new deposit first');
+      return;
+    }
+
+    if (!otpCode.trim() || otpCode.trim().length < 4) {
+      showMessage('Enter the OTP sent to your phone');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const verifyResult = await API.verifyPaymentOtp(paymentId, phone.trim(), otpCode.trim());
+
+      if (!verifyResult.success) {
+        showMessage(verifyResult.error || 'OTP verification failed');
+        return;
+      }
+
+      setDepositStep('processing');
+      showMessage('OTP verified. Approve the payment prompt on your phone...', 'success');
+
+      const payment = await waitForPaymentCompletion(paymentId);
+      const depositAmount = Number(payment.amount) || parseFloat(amount);
+
+      const depositResult = await API.recordDeposit({
+        amount: depositAmount,
+        paymentId: payment.payment_id || paymentId,
+        reference: payment.reference || paymentId,
+        network: payment.network || network,
+      });
+
+      if (depositResult.success) {
+        showMessage('Payment successful. Balance updated.', 'success');
+        setAmount('');
+        resetDepositFlow();
+        if (onUpdateUser && depositResult.user) {
+          onUpdateUser(depositResult.user);
+        }
+      }
+    } catch (error) {
+      console.error('Deposit verify error:', error);
+      showMessage(error.response?.data?.error || error.message || 'Payment failed');
+      setDepositStep('otp');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!paymentId) return;
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const result = await API.resendPaymentOtp(paymentId, phone.trim());
+      showMessage(result.message || 'OTP resent to your phone', result.success ? 'success' : 'error');
+    } catch (error) {
+      showMessage(error.response?.data?.error || 'Failed to resend OTP');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleWithdraw = async () => {
@@ -155,7 +175,7 @@ export const BankView = ({ user, onUpdateUser }) => {
     setMessage('');
 
     try {
-      const result = await API.requestWithdrawal(withdrawAmount, user.phone, 'mtn');
+      const result = await API.requestWithdrawal(withdrawAmount, phone.trim() || user.phone, network);
 
       if (result.success) {
         showMessage('Withdrawal request submitted. Awaiting admin approval.', 'success');
@@ -185,7 +205,7 @@ export const BankView = ({ user, onUpdateUser }) => {
 
   return (
     <motion.div
-      className={`bank-view${isOpen ? ' bank-view--payment-open' : ''}`}
+      className="bank-view"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
@@ -204,31 +224,123 @@ export const BankView = ({ user, onUpdateUser }) => {
           <button
             type="button"
             className={action === 'deposit' ? 'active' : ''}
-            onClick={() => setAction('deposit')}
+            onClick={() => {
+              setAction('deposit');
+              resetDepositFlow();
+              setMessage('');
+            }}
           >
             Deposit
           </button>
           <button
             type="button"
             className={action === 'withdraw' ? 'active' : ''}
-            onClick={() => setAction('withdraw')}
+            onClick={() => {
+              setAction('withdraw');
+              resetDepositFlow();
+              setMessage('');
+            }}
           >
             Withdraw
           </button>
         </div>
 
         <div className="bank-form">
-          <div className="input-group">
-            <label>Amount (GHS)</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              min="1"
-              step="0.01"
-            />
-          </div>
+          {action === 'deposit' && depositStep === 'otp' && (
+            <div className="deposit-otp-panel">
+              <h4>Enter Payment OTP</h4>
+              <p>
+                Payloqa sent a code to <strong>{phone}</strong>. Enter it below, then approve the
+                mobile money prompt on your phone.
+              </p>
+              <div className="input-group">
+                <label>OTP Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Enter OTP"
+                  maxLength={6}
+                />
+              </div>
+              <div className="deposit-otp-actions">
+                <button
+                  type="button"
+                  className="bank-action-btn"
+                  onClick={handleVerifyOtp}
+                  disabled={loading}
+                >
+                  {loading ? 'Verifying...' : 'Verify OTP'}
+                </button>
+                <button
+                  type="button"
+                  className="bank-secondary-btn"
+                  onClick={handleResendOtp}
+                  disabled={loading}
+                >
+                  Resend OTP
+                </button>
+                <button
+                  type="button"
+                  className="bank-secondary-btn"
+                  onClick={resetDepositFlow}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {action === 'deposit' && depositStep === 'processing' && (
+            <div className="deposit-otp-panel">
+              <h4>Processing Payment</h4>
+              <p>Check your phone and approve the MoMo payment prompt. This may take a moment...</p>
+            </div>
+          )}
+
+          {(depositStep === 'form' || action === 'withdraw') && (
+            <>
+              <div className="input-group">
+                <label>Amount (GHS)</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  min="1"
+                  step="0.01"
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Phone Number</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="024XXXXXXX"
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Network</label>
+                <div className="bank-network-picker">
+                  {NETWORKS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={network === item.id ? 'active' : ''}
+                      onClick={() => setNetwork(item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           {message && (
             <div className={`bank-message ${messageType}`}>
@@ -236,30 +348,24 @@ export const BankView = ({ user, onUpdateUser }) => {
             </div>
           )}
 
-          <button
-            type="button"
-            className="bank-action-btn"
-            onClick={action === 'deposit' ? handleDeposit : handleWithdraw}
-            disabled={loading || (action === 'deposit' && isOpen)}
-          >
-            {loading ? 'Processing...' : (action === 'deposit' ? 'Deposit Funds' : 'Request Withdrawal')}
-          </button>
+          {depositStep === 'form' && (
+            <button
+              type="button"
+              className="bank-action-btn"
+              onClick={action === 'deposit' ? handleDeposit : handleWithdraw}
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : (action === 'deposit' ? 'Deposit Funds' : 'Request Withdrawal')}
+            </button>
+          )}
 
           <div className="bank-info">
             {action === 'deposit'
-              ? 'Secure payments via Payloqa. Enter your phone (+233) and network in the payment window.'
+              ? 'Payments go through Payloqa via our secure server. Use the phone number linked to your MoMo wallet.'
               : 'Withdrawals are processed after admin approval, typically within 24 hours.'}
           </div>
         </div>
       </div>
-
-      {paymentConfig && (
-        <PaymentWidget
-          config={paymentConfig}
-          isOpen={isOpen}
-          onClose={closePaymentWidget}
-        />
-      )}
     </motion.div>
   );
 };
