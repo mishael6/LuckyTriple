@@ -37,18 +37,24 @@ export const API = {
     return response.data;
   },
 
+  updateWalletPhone: async (phone, network) => {
+    const response = await axios.put('/user/wallet-phone', { phone, network });
+    return response.data;
+  },
+
   // Payments
   initiateDeposit: async (amount, network) => {
     const response = await axios.post('/payments/deposit', { amount, network });
     return response.data;
   },
 
-  recordDeposit: async ({ amount, network, paymentId, reference }) => {
+  recordDeposit: async ({ amount, network, paymentId, reference, phone }) => {
     const response = await axios.post('/payments/deposit', {
       amount,
       network,
       paymentId,
       reference,
+      phone,
     });
     return response.data;
   },
@@ -59,8 +65,8 @@ export const API = {
   },
 
   // Withdrawals
-  requestWithdrawal: async (amount) => {
-    const response = await axios.post('/withdrawals/request', { amount });
+  requestWithdrawal: async (amount, phone, network) => {
+    const response = await axios.post('/withdrawals/request', { amount, phone, network });
     return response.data;
   },
 

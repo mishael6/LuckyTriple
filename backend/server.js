@@ -47,6 +47,28 @@ const PAYLOQA_CONFIG = {
   paymentsBaseURL: 'https://payments.payloqa.com/api/v1/payments'
 };
 
+const VALID_WALLET_NETWORKS = ['mtn', 'vodafone', 'airteltigo'];
+
+const formatGhanaPhone = (phone) => {
+  if (!phone || typeof phone !== 'string') {
+    return null;
+  }
+
+  let formattedPhone = phone.replace(/\D/g, '');
+
+  if (formattedPhone.startsWith('0') && formattedPhone.length === 10) {
+    formattedPhone = `233${formattedPhone.substring(1)}`;
+  } else if (formattedPhone.length === 9) {
+    formattedPhone = `233${formattedPhone}`;
+  }
+
+  if (!/^233\d{9}$/.test(formattedPhone)) {
+    return null;
+  }
+
+  return `+${formattedPhone}`;
+};
+
 const payloqaAPI = {
   // ============================================================================
   // SMS FUNCTIONS
@@ -694,6 +716,48 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Save wallet phone/network before deposits or withdrawals
+app.put('/api/user/wallet-phone', authenticateToken, async (req, res) => {
+  try {
+    const { phone, network } = req.body;
+    const formattedPhone = formatGhanaPhone(phone);
+
+    if (!formattedPhone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Enter a valid Ghana phone number (e.g. 024XXXXXXX or +233XXXXXXXXX)',
+      });
+    }
+
+    if (network && !VALID_WALLET_NETWORKS.includes(network)) {
+      return res.status(400).json({ success: false, error: 'Invalid mobile network' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    user.phone = formattedPhone;
+    await user.save();
+
+    res.json({
+      success: true,
+      user: {
+        _id: user._id,
+        email: user.email,
+        phone: user.phone,
+        balance: user.balance,
+        isAdmin: user.isAdmin,
+      },
+      network: network || null,
+    });
+  } catch (error) {
+    console.error('Wallet phone update error:', error);
+    res.status(500).json({ success: false, error: 'Failed to save wallet phone number' });
+  }
+});
+
 // ============================================================================
 // ROUTES - PAYMENTS & DEPOSITS
 // ============================================================================
@@ -752,23 +816,43 @@ app.post('/api/payments/webhook', async (req, res) => {
 // Request Withdrawal
 app.post('/api/withdrawals/request', authenticateToken, async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount, phone, network } = req.body;
     const user = await User.findById(req.user.id);
+    const formattedPhone = formatGhanaPhone(phone || user.phone);
+    const payoutNetwork = network || 'mtn';
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, error: 'Invalid amount' });
+    }
+
+    if (!formattedPhone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Enter a valid Ghana phone number for your withdrawal',
+      });
+    }
+
+    if (!VALID_WALLET_NETWORKS.includes(payoutNetwork)) {
+      return res.status(400).json({ success: false, error: 'Invalid mobile network' });
     }
 
     if (user.balance < amount) {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
+    user.phone = formattedPhone;
+    await user.save();
+
     const transaction = new Transaction({
       userId: user._id,
       type: 'withdrawal',
       amount,
       status: 'pending',
-      reference: `WTH_${Date.now()}_${user._id}`
+      reference: `WTH_${Date.now()}_${user._id}`,
+      paymentDetails: {
+        phone: formattedPhone,
+        network: payoutNetwork,
+      },
     });
     await transaction.save();
 
@@ -789,7 +873,7 @@ app.post('/api/withdrawals/request', authenticateToken, async (req, res) => {
       for (const admin of admins) {
         await payloqaAPI.sendSMS(
           admin.phone,
-          `🔔 New withdrawal request: GHS ${amount.toFixed(2)} from ${user.email}. Login to approve/reject.`
+          `🔔 New withdrawal: GHS ${amount.toFixed(2)} from ${user.email}. Phone: ${formattedPhone} (${payoutNetwork.toUpperCase()}). Login to approve/reject.`
         );
       }
       console.log('✅ Admin notification SMS sent');
@@ -800,7 +884,14 @@ app.post('/api/withdrawals/request', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: 'Withdrawal request submitted. You will receive an SMS when processed.',
-      transaction
+      transaction,
+      user: {
+        _id: user._id,
+        email: user.email,
+        phone: user.phone,
+        balance: user.balance,
+        isAdmin: user.isAdmin,
+      },
     });
   } catch (error) {
     console.error('Withdrawal request error:', error);
@@ -2452,17 +2543,32 @@ process.on('unhandledRejection', (err) => {
 app.post('/api/payments/deposit', authenticateToken, async (req, res) => {
   await connectToDatabase();
   try {
-    const { amount, network, paymentId, reference } = req.body;
+    const { amount, network, paymentId, reference, phone } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
+    const formattedPhone = formatGhanaPhone(phone);
+    if (formattedPhone) {
+      user.phone = formattedPhone;
+    }
+
     // Check if this payment was already recorded
     const existing = await Transaction.findOne({ reference });
     if (existing) {
-      return res.json({ success: true, message: 'Already recorded', user });
+      return res.json({
+        success: true,
+        message: 'Already recorded',
+        user: {
+          _id: user._id,
+          email: user.email,
+          phone: user.phone,
+          balance: user.balance,
+          isAdmin: user.isAdmin,
+        },
+      });
     }
 
     user.balance += parseFloat(amount);
@@ -2475,6 +2581,9 @@ app.post('/api/payments/deposit', authenticateToken, async (req, res) => {
       status: 'completed',
       processedAt: new Date(),
       reference: reference || paymentId,
+      paymentDetails: formattedPhone || network
+        ? { phone: formattedPhone || user.phone, network: network || null }
+        : undefined,
     });
 
     res.json({

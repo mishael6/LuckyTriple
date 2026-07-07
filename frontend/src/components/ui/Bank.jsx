@@ -13,14 +13,28 @@ const isHttpsUrl = (url) => {
   }
 };
 
+const NETWORK_OPTIONS = [
+  { value: 'mtn', label: 'MTN Mobile Money' },
+  { value: 'vodafone', label: 'Telecel Cash' },
+  { value: 'airteltigo', label: 'AirtelTigo Money' },
+];
+
 export const BankView = ({ user, onUpdateUser }) => {
   const [action, setAction] = useState('deposit');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [network, setNetwork] = useState('mtn');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('error');
   const [isOpen, setIsOpen] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState(null);
+
+  useEffect(() => {
+    if (user?.phone) {
+      setPhone(user.phone);
+    }
+  }, [user?.phone]);
 
   const showMessage = (text, type = 'error') => {
     setMessage(text);
@@ -39,6 +53,22 @@ export const BankView = ({ user, onUpdateUser }) => {
     return () => document.body.classList.remove('payment-widget-open');
   }, [isOpen]);
 
+  const validatePhone = () => {
+    if (!phone.trim()) {
+      showMessage('Please enter your mobile money phone number');
+      return false;
+    }
+    return true;
+  };
+
+  const saveWalletPhone = async () => {
+    const result = await API.updateWalletPhone(phone, network);
+    if (result.user && onUpdateUser) {
+      onUpdateUser(result.user);
+    }
+    return result;
+  };
+
   if (!user) {
     return (
       <div className="bank-view">
@@ -50,12 +80,14 @@ export const BankView = ({ user, onUpdateUser }) => {
     );
   }
 
-  const handleDeposit = () => {
+  const handleDeposit = async () => {
     const depositAmount = parseFloat(amount);
     if (!depositAmount || depositAmount <= 0) {
       showMessage('Please enter a valid amount');
       return;
     }
+
+    if (!validatePhone()) return;
 
     const apiKey = import.meta.env.VITE_PAYMENT_API_KEY;
     const platformId = import.meta.env.VITE_PAYMENT_PLATFORM_ID;
@@ -77,49 +109,64 @@ export const BankView = ({ user, onUpdateUser }) => {
       return;
     }
 
+    setLoading(true);
     setMessage('');
-    setPaymentConfig({
-      apiKey,
-      platformId,
-      amount: depositAmount,
-      currency: 'GHS',
-      primaryColor: '#f0a500',
-      displayMode: 'modal',
-      redirect_url: redirectUrl,
-      webhookUrl,
-      orderId: `ORDER-${Date.now()}`,
-      metadata: {
-        order_reference: `ORD-${Date.now()}`,
-        user_id: user._id,
-      },
-      onSuccess: async (result) => {
-        closePaymentWidget();
 
-        try {
-          const depositResult = await API.recordDeposit({
-            amount: depositAmount,
-            paymentId: result.payment_id,
-            reference: result.reference || result.payment_id,
-          });
+    try {
+      await saveWalletPhone();
 
-          if (depositResult.success) {
-            showMessage('Payment successful. Balance updated.', 'success');
-            setAmount('');
-            if (onUpdateUser && depositResult.user) {
-              onUpdateUser(depositResult.user);
+      setPaymentConfig({
+        apiKey,
+        platformId,
+        amount: depositAmount,
+        currency: 'GHS',
+        primaryColor: '#f0a500',
+        displayMode: 'modal',
+        redirect_url: redirectUrl,
+        webhookUrl,
+        orderId: `ORDER-${Date.now()}`,
+        metadata: {
+          order_reference: `ORD-${Date.now()}`,
+          user_id: user._id,
+          phone,
+          network,
+        },
+        onSuccess: async (result) => {
+          closePaymentWidget();
+
+          try {
+            const depositResult = await API.recordDeposit({
+              amount: depositAmount,
+              network,
+              phone,
+              paymentId: result.payment_id,
+              reference: result.reference || result.payment_id,
+            });
+
+            if (depositResult.success) {
+              showMessage('Payment successful. Balance updated.', 'success');
+              setAmount('');
+              if (onUpdateUser && depositResult.user) {
+                onUpdateUser(depositResult.user);
+              }
             }
+          } catch (error) {
+            console.error('Failed to record deposit:', error);
+            showMessage('Payment received but balance update failed. Contact support.');
           }
-        } catch (error) {
-          console.error('Failed to record deposit:', error);
-          showMessage('Payment received but balance update failed. Contact support.');
-        }
-      },
-      onError: (error) => {
-        closePaymentWidget();
-        showMessage(error?.message || 'Payment failed. Please try again.');
-      },
-    });
-    setIsOpen(true);
+        },
+        onError: (error) => {
+          closePaymentWidget();
+          showMessage(error?.message || 'Payment failed. Please try again.');
+        },
+      });
+      setIsOpen(true);
+    } catch (error) {
+      console.error('Deposit setup error:', error);
+      showMessage(error.response?.data?.error || 'Failed to prepare deposit');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleWithdraw = async () => {
@@ -128,6 +175,8 @@ export const BankView = ({ user, onUpdateUser }) => {
       showMessage('Please enter a valid amount');
       return;
     }
+
+    if (!validatePhone()) return;
 
     if (withdrawAmount > user.balance) {
       showMessage('Insufficient balance');
@@ -138,11 +187,14 @@ export const BankView = ({ user, onUpdateUser }) => {
     setMessage('');
 
     try {
-      const result = await API.requestWithdrawal(withdrawAmount);
+      const result = await API.requestWithdrawal(withdrawAmount, phone, network);
 
       if (result.success) {
         showMessage('Withdrawal request submitted. Awaiting admin approval.', 'success');
         setAmount('');
+        if (onUpdateUser && result.user) {
+          onUpdateUser(result.user);
+        }
       }
     } catch (error) {
       console.error('Withdrawal error:', error);
@@ -202,6 +254,28 @@ export const BankView = ({ user, onUpdateUser }) => {
 
         <div className="bank-form">
           <div className="input-group">
+            <label>Mobile Money Phone Number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="024XXXXXXX or +233XXXXXXXXX"
+              autoComplete="tel"
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Mobile Network</label>
+            <select value={network} onChange={(e) => setNetwork(e.target.value)}>
+              {NETWORK_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="input-group">
             <label>Amount (GHS)</label>
             <input
               type="number"
@@ -230,8 +304,8 @@ export const BankView = ({ user, onUpdateUser }) => {
 
           <div className="bank-info">
             {action === 'deposit'
-              ? 'Secure payments via Payloqa. You will choose your network and phone number in the payment window.'
-              : 'Withdrawals are processed after admin approval, typically within 24 hours.'}
+              ? 'Enter your phone number and network here first, then complete payment in the Payloqa window.'
+              : 'Your phone number and network will be sent to admin for withdrawal processing.'}
           </div>
         </div>
       </div>

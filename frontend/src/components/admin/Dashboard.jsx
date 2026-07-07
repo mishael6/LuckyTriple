@@ -9,6 +9,12 @@ import { AdminGameSettings } from './AdminGameSettings';
 // ADMIN DASHBOARD
 // ============================================================================
 
+const NETWORK_LABELS = {
+  mtn: 'MTN',
+  vodafone: 'Telecel',
+  airteltigo: 'AirtelTigo',
+};
+
 export const AdminDashboard = ({ user, onLogout }) => {
   const [view, setView] = useState('stats');
   const [users, setUsers] = useState([]);
@@ -361,7 +367,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
                 <thead>
                   <tr>
                     <th>User Email</th>
-                    <th>Phone</th>
+                    <th>Payout Phone</th>
+                    <th>Network</th>
                     <th>Amount</th>
                     <th>Date</th>
                     <th>Status</th>
@@ -372,7 +379,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
                   {withdrawals.map(w => (
                     <tr key={w._id}>
                       <td>{w.userId?.email || 'Unknown'}</td>
-                      <td>{w.userId?.phone || 'N/A'}</td>
+                      <td>{w.paymentDetails?.phone || w.userId?.phone || 'N/A'}</td>
+                      <td>{NETWORK_LABELS[w.paymentDetails?.network] || w.paymentDetails?.network || 'N/A'}</td>
                       <td>GHS {w.amount.toFixed(2)}</td>
                       <td>{new Date(w.createdAt).toLocaleDateString()}</td>
                       <td>
