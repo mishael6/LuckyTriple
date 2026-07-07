@@ -216,7 +216,12 @@ export const API = {
   removeUser: async (userId) => {
     const response = await axios.delete(`/admin/users/${userId}`);
     return response.data;
-  },  // ← ADDED COMMA HERE!
+  },
+
+  wipeDatabase: async (confirmation) => {
+    const response = await axios.post('/admin/wipe-database', { confirmation });
+    return response.data;
+  },
 
   // Referral Admin Routes
   getReferrers: async () => {

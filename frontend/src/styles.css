@@ -1059,6 +1059,49 @@ td {
   color: #fff;
 }
 
+.admin-danger-zone {
+  margin-top: 32px;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 68, 68, 0.35);
+  background: rgba(255, 68, 68, 0.08);
+}
+
+.admin-danger-zone h4 {
+  color: #ff6b6b;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.admin-danger-zone p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.admin-btn-wipe {
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.25) 0%, rgba(180, 30, 30, 0.25) 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-btn-wipe:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.4) 0%, rgba(180, 30, 30, 0.4) 100%);
+  transform: translateY(-1px);
+}
+
+.admin-btn-wipe:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .settings-form {
   max-width: 500px;
 }

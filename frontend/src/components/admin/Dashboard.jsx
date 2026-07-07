@@ -28,6 +28,7 @@ export const AdminDashboard = ({ user, onLogout }) => {
   const [coinHistory, setCoinHistory] = useState([]);
   const [diceHistory, setDiceHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [wipingDatabase, setWipingDatabase] = useState(false);
 
   // SMS State
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -119,6 +120,31 @@ export const AdminDashboard = ({ user, onLogout }) => {
       } catch (error) {
         alert(error.response?.data?.error || 'Failed to delete user');
       }
+    }
+  };
+
+  const handleWipeDatabase = async () => {
+    const confirmed = window.confirm(
+      '⚠️ DANGER: This will permanently delete ALL users, transactions, game history, SMS logs, and referral data.\n\nAdmin accounts will be kept. Game settings will be kept.\n\nAre you sure you want to continue?'
+    );
+
+    if (!confirmed) return;
+
+    const confirmation = prompt('Type DELETE ALL DATA to confirm this action:');
+    if (confirmation !== 'DELETE ALL DATA') {
+      alert('Wipe cancelled. Confirmation text did not match.');
+      return;
+    }
+
+    setWipingDatabase(true);
+    try {
+      const result = await API.wipeDatabase('DELETE ALL DATA');
+      alert(`${result.message}\n\nDeleted:\n- Users: ${result.deleted.users}\n- Transactions: ${result.deleted.transactions}\n- Game rounds: ${result.deleted.gameHistory + result.deleted.spinHistory + result.deleted.slotsHistory + result.deleted.rouletteHistory + result.deleted.coinHistory + result.deleted.diceHistory}`);
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to wipe database');
+    } finally {
+      setWipingDatabase(false);
     }
   };
 
@@ -301,6 +327,23 @@ export const AdminDashboard = ({ user, onLogout }) => {
                 <div className="stat-value">{stats.pendingWithdrawals}</div>
                 <div className="stat-label">Pending Withdrawals</div>
               </div>
+            </div>
+
+            <div className="admin-danger-zone">
+              <h4>Danger Zone</h4>
+              <p>
+                Permanently delete all database records except admin accounts.
+                This removes users, balances, transactions, game history, SMS logs, and referral data.
+                Game settings are preserved.
+              </p>
+              <button
+                type="button"
+                className="admin-btn-wipe"
+                onClick={handleWipeDatabase}
+                disabled={wipingDatabase}
+              >
+                {wipingDatabase ? 'Wiping database...' : '🗑️ Delete All Data (Keep Admins)'}
+              </button>
             </div>
           </div>
         )}

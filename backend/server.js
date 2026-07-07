@@ -1950,6 +1950,86 @@ app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, 
   }
 });
 
+// Wipe all database data except admin accounts
+app.post('/api/admin/wipe-database', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { confirmation } = req.body;
+
+    if (confirmation !== 'DELETE ALL DATA') {
+      return res.status(400).json({
+        success: false,
+        error: 'Confirmation text must be exactly: DELETE ALL DATA',
+      });
+    }
+
+    const adminUsers = await User.find({ isAdmin: true }).select('email');
+    const adminCount = adminUsers.length;
+
+    if (adminCount === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No admin accounts found. Wipe aborted to prevent total lockout.',
+      });
+    }
+
+    const [
+      transactionsDeleted,
+      gameHistoryDeleted,
+      smsLogsDeleted,
+      spinHistoryDeleted,
+      slotsHistoryDeleted,
+      rouletteHistoryDeleted,
+      coinHistoryDeleted,
+      diceHistoryDeleted,
+      referrersDeleted,
+      referralStatsDeleted,
+      commissionTransactionsDeleted,
+      referrerWithdrawalsDeleted,
+      usersDeleted,
+    ] = await Promise.all([
+      Transaction.deleteMany({}),
+      GameHistory.deleteMany({}),
+      SMSLog.deleteMany({}),
+      SpinGameHistory.deleteMany({}),
+      SlotsGameHistory.deleteMany({}),
+      RouletteGameHistory.deleteMany({}),
+      CoinGameHistory.deleteMany({}),
+      DiceGameHistory.deleteMany({}),
+      Referrer.deleteMany({}),
+      ReferralStats.deleteMany({}),
+      CommissionTransaction.deleteMany({}),
+      ReferrerWithdrawal.deleteMany({}),
+      User.deleteMany({ isAdmin: { $ne: true } }),
+    ]);
+
+    console.log(`🗑️ Database wiped by admin ${req.user.email}. Kept ${adminCount} admin account(s).`);
+
+    res.json({
+      success: true,
+      message: `All data wiped. ${adminCount} admin account(s) preserved.`,
+      deleted: {
+        users: usersDeleted.deletedCount,
+        transactions: transactionsDeleted.deletedCount,
+        gameHistory: gameHistoryDeleted.deletedCount,
+        smsLogs: smsLogsDeleted.deletedCount,
+        spinHistory: spinHistoryDeleted.deletedCount,
+        slotsHistory: slotsHistoryDeleted.deletedCount,
+        rouletteHistory: rouletteHistoryDeleted.deletedCount,
+        coinHistory: coinHistoryDeleted.deletedCount,
+        diceHistory: diceHistoryDeleted.deletedCount,
+        referrers: referrersDeleted.deletedCount,
+        referralStats: referralStatsDeleted.deletedCount,
+        commissionTransactions: commissionTransactionsDeleted.deletedCount,
+        referrerWithdrawals: referrerWithdrawalsDeleted.deletedCount,
+      },
+      preservedAdmins: adminUsers.map((admin) => admin.email),
+    });
+  } catch (error) {
+    console.error('Database wipe error:', error);
+    res.status(500).json({ success: false, error: 'Failed to wipe database' });
+  }
+});
+
 // ============================================================================
 // ROUTES - REFERRAL SYSTEM
 // ============================================================================
