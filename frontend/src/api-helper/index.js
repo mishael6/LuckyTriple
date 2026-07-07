@@ -86,6 +86,26 @@ export const API = {
     return response.data;
   },
 
+  playSlotsGame: async (bet) => {
+    const response = await axios.post('/game/slots', { bet });
+    return response.data;
+  },
+
+  getSlotsGameHistory: async () => {
+    const response = await axios.get('/game/slots-history');
+    return response.data;
+  },
+
+  playRouletteGame: async (bet, betType, betNumber) => {
+    const response = await axios.post('/game/roulette', { bet, betType, betNumber });
+    return response.data;
+  },
+
+  getRouletteGameHistory: async () => {
+    const response = await axios.get('/game/roulette-history');
+    return response.data;
+  },
+
   // Admin
   getAllUsers: async () => {
     const response = await axios.get('/admin/users');
@@ -114,6 +134,16 @@ export const API = {
 
   getAdminSpinHistory: async () => {
     const response = await axios.get('/admin/spin-history');
+    return response.data;
+  },
+
+  getAdminSlotsHistory: async () => {
+    const response = await axios.get('/admin/slots-history');
+    return response.data;
+  },
+
+  getAdminRouletteHistory: async () => {
+    const response = await axios.get('/admin/roulette-history');
     return response.data;
   },
 

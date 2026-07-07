@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AuthPage } from './components/pages/AuthPage';
 import { GamePage } from './components/pages/GamePage';
 import { AdminDashboard } from './components/admin/Dashboard';
@@ -41,9 +41,12 @@ export default function LuckyTripleGame() {
     localStorage.removeItem('token');
   };
 
-  const handleUpdateUser = (updatedUser) => {
-    setUser(updatedUser);
-  };
+  const handleUpdateUser = useCallback((updates) => {
+    setUser((prev) => {
+      if (!prev) return updates;
+      return { ...prev, ...updates };
+    });
+  }, []);
 
   if (loading) {
     return <LoadingScreen label="Preparing your casino..." />;

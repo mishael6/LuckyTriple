@@ -235,26 +235,211 @@ const spinGameHistorySchema = new mongoose.Schema({
 
 const SpinGameHistory = mongoose.model('SpinGameHistory', spinGameHistorySchema);
 
+const slotsGameHistorySchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  betAmount: { type: Number, required: true },
+  reels: [{ type: String }],
+  winTier: { type: String, enum: ['jackpot', 'bigWin', 'smallWin', 'none'], default: 'none' },
+  multiplier: { type: Number, default: 0 },
+  won: { type: Boolean, default: false },
+  profit: { type: Number, required: true },
+  balanceBefore: { type: Number },
+  balanceAfter: { type: Number },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const SlotsGameHistory = mongoose.model('SlotsGameHistory', slotsGameHistorySchema);
+
+const rouletteGameHistorySchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  betAmount: { type: Number, required: true },
+  betType: { type: String, enum: ['red', 'black', 'number'], required: true },
+  betNumber: { type: Number },
+  spinNumber: { type: Number, required: true },
+  spinColor: { type: String, enum: ['red', 'black', 'green'] },
+  won: { type: Boolean, default: false },
+  multiplier: { type: Number, default: 0 },
+  profit: { type: Number, required: true },
+  balanceBefore: { type: Number },
+  balanceAfter: { type: Number },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const RouletteGameHistory = mongoose.model('RouletteGameHistory', rouletteGameHistorySchema);
+
 // Game Settings Model
 const gameSettingsSchema = new mongoose.Schema({
   houseFee: { type: Number, default: 10 },
   maxBet: { type: Number, default: 1000 },
   minBet: { type: Number, default: 1 },
+  difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
+  gamesEnabled: {
+    luckyTriple: { type: Boolean, default: true },
+    spin: { type: Boolean, default: true },
+    slots: { type: Boolean, default: true },
+    roulette: { type: Boolean, default: true }
+  },
   payoutMultipliers: {
     threeMatches: { type: Number, default: 100 },
     twoMatches: { type: Number, default: 10 },
     oneMatch: { type: Number, default: 2 }
+  },
+  tripleWinChances: {
+    threeMatch: { type: Number, default: 5 },
+    twoMatch: { type: Number, default: 25 },
+    oneMatch: { type: Number, default: 30 },
+    zeroMatch: { type: Number, default: 40 }
   },
   spinWinChances: {
     x2: { type: Number, default: 45 },
     x3: { type: Number, default: 30 },
     x4: { type: Number, default: 20 }
   },
+  slotsWinChances: {
+    jackpot: { type: Number, default: 3 },
+    bigWin: { type: Number, default: 15 },
+    smallWin: { type: Number, default: 35 }
+  },
+  slotsPayouts: {
+    jackpot: { type: Number, default: 50 },
+    threeOfKind: { type: Number, default: 10 },
+    twoOfKind: { type: Number, default: 2 }
+  },
+  rouletteWinChances: {
+    color: { type: Number, default: 48 },
+    number: { type: Number, default: 3 }
+  },
+  roulettePayouts: {
+    color: { type: Number, default: 2 },
+    number: { type: Number, default: 35 }
+  },
   updatedAt: { type: Date, default: Date.now },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
 const GameSettings = mongoose.model('GameSettings', gameSettingsSchema);
+
+const DIFFICULTY_PRESETS = {
+  easy: { triple: { threeMatch: 8, twoMatch: 32, oneMatch: 35, zeroMatch: 25 }, spin: { x2: 55, x3: 40, x4: 30 }, slots: { jackpot: 5, bigWin: 22, smallWin: 45 }, roulette: { color: 52, number: 5 } },
+  medium: { triple: { threeMatch: 5, twoMatch: 25, oneMatch: 30, zeroMatch: 40 }, spin: { x2: 45, x3: 30, x4: 20 }, slots: { jackpot: 3, bigWin: 15, smallWin: 35 }, roulette: { color: 48, number: 3 } },
+  hard: { triple: { threeMatch: 2, twoMatch: 15, oneMatch: 23, zeroMatch: 60 }, spin: { x2: 35, x3: 22, x4: 12 }, slots: { jackpot: 1, bigWin: 8, smallWin: 22 }, roulette: { color: 42, number: 2 } }
+};
+
+const SLOT_SYMBOLS = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
+const ROULETTE_RED = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+const ROULETTE_BLACK = [2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35];
+
+const getRouletteColor = (num) => {
+  if (num === 0) return 'green';
+  return ROULETTE_RED.includes(num) ? 'red' : 'black';
+};
+
+const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+const generateTripleOutcome = (playerGuesses, chances) => {
+  const c3 = chances.threeMatch || 5;
+  const c2 = chances.twoMatch || 25;
+  const c1 = chances.oneMatch || 30;
+  const roll = Math.random() * 100;
+  let winningNumbers;
+  let targetMatches;
+
+  if (roll < c3) {
+    targetMatches = 3;
+    winningNumbers = [...playerGuesses];
+  } else if (roll < c3 + c2) {
+    targetMatches = 2;
+    const positions = [0, 1, 2].sort(() => Math.random() - 0.5);
+    const matchPositions = positions.slice(0, 2);
+    winningNumbers = [Math.floor(Math.random() * 10), Math.floor(Math.random() * 10), Math.floor(Math.random() * 10)];
+    matchPositions.forEach((pos) => { winningNumbers[pos] = playerGuesses[pos]; });
+    for (let i = 0; i < 3; i++) {
+      if (!matchPositions.includes(i)) {
+        while (winningNumbers[i] === playerGuesses[i]) winningNumbers[i] = Math.floor(Math.random() * 10);
+      }
+    }
+  } else if (roll < c3 + c2 + c1) {
+    targetMatches = 1;
+    const matchPosition = Math.floor(Math.random() * 3);
+    winningNumbers = [Math.floor(Math.random() * 10), Math.floor(Math.random() * 10), Math.floor(Math.random() * 10)];
+    winningNumbers[matchPosition] = playerGuesses[matchPosition];
+    for (let i = 0; i < 3; i++) {
+      if (i !== matchPosition) {
+        while (winningNumbers[i] === playerGuesses[i]) winningNumbers[i] = Math.floor(Math.random() * 10);
+      }
+    }
+  } else {
+    targetMatches = 0;
+    winningNumbers = [Math.floor(Math.random() * 10), Math.floor(Math.random() * 10), Math.floor(Math.random() * 10)];
+    for (let i = 0; i < 3; i++) {
+      while (winningNumbers[i] === playerGuesses[i]) winningNumbers[i] = Math.floor(Math.random() * 10);
+    }
+  }
+
+  return { winningNumbers, targetMatches };
+};
+
+const generateSlotReels = (tier) => {
+  if (tier === 'jackpot') {
+    const sym = pickRandom(['7️⃣', '💎']);
+    return [sym, sym, sym];
+  }
+  if (tier === 'bigWin') {
+    const sym = pickRandom(['🍒', '🍋', '🔔']);
+    return [sym, sym, sym];
+  }
+  if (tier === 'smallWin') {
+    const sym = pickRandom(SLOT_SYMBOLS);
+    const pos = Math.floor(Math.random() * 3);
+    const reels = SLOT_SYMBOLS.filter((s) => s !== sym).slice(0, 3);
+    while (reels.length < 3) reels.push(pickRandom(SLOT_SYMBOLS.filter((s) => s !== sym)));
+    reels[pos] = sym;
+    reels[(pos + 1) % 3] = sym;
+    reels[(pos + 2) % 3] = pickRandom(SLOT_SYMBOLS.filter((s) => s !== sym));
+    return reels;
+  }
+  const reels = [];
+  while (reels.length < 3) {
+    const sym = pickRandom(SLOT_SYMBOLS);
+    if (reels.filter((r) => r === sym).length >= 2) continue;
+    reels.push(sym);
+  }
+  if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {
+    return generateSlotReels('none');
+  }
+  return reels;
+};
+
+const generateRouletteSpin = (betType, betNumber, won) => {
+  if (won) {
+    if (betType === 'number') return betNumber;
+    if (betType === 'red') return pickRandom(ROULETTE_RED);
+    return pickRandom(ROULETTE_BLACK);
+  }
+  if (betType === 'number') {
+    let num;
+    do { num = Math.floor(Math.random() * 37); } while (num === betNumber);
+    return num;
+  }
+  if (betType === 'red') return pickRandom([...ROULETTE_BLACK, 0]);
+  return pickRandom([...ROULETTE_RED, 0]);
+};
+
+const processGamePayout = async (user, bet, profit, winAmount, historyDoc, gameRef) => {
+  const balanceBefore = user.balance;
+  user.balance += profit;
+  await user.save();
+  historyDoc.balanceBefore = balanceBefore;
+  historyDoc.balanceAfter = user.balance;
+  await historyDoc.save();
+
+  await Transaction.create({ userId: user._id, type: 'bet', amount: bet, status: 'completed', reference: gameRef, processedAt: new Date() });
+  if (winAmount > 0) {
+    await Transaction.create({ userId: user._id, type: 'win', amount: winAmount, status: 'completed', reference: gameRef, processedAt: new Date() });
+    await calculateAndPayCommission(user._id, historyDoc._id, winAmount);
+  }
+  return user.balance;
+};
 
 // ============================================================================
 // MIDDLEWARE - AUTH
@@ -602,99 +787,16 @@ app.post('/api/game/play', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
-    // ============================================================================
-    // NEW GAME LOGIC - WEIGHTED WIN RATES
-    // ============================================================================
-
-    // Convert guesses to numbers
-    const playerGuesses = guesses.map(g => parseInt(g));
-
-    // Decide outcome based on probability
-    const random = Math.random() * 100;
-
-    let winningNumbers;
-    let targetMatches;
-
-    if (random < 5) {
-      // 5% chance - Triple match (JACKPOT!)
-      targetMatches = 3;
-      winningNumbers = [...playerGuesses];
-      console.log('🎰 Jackpot outcome generated!');
-
-    } else if (random < 30) {
-      // 25% chance - Double match
-      targetMatches = 2;
-
-      // Pick 2 random positions to match
-      const positions = [0, 1, 2];
-      const shuffled = positions.sort(() => Math.random() - 0.5);
-      const matchPositions = shuffled.slice(0, 2);
-
-      winningNumbers = [
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10)
-      ];
-
-      // Set the matching positions
-      matchPositions.forEach(pos => {
-        winningNumbers[pos] = playerGuesses[pos];
-      });
-
-      console.log('🌟 Double match outcome generated');
-
-    } else if (random < 60) {
-      // 30% chance - Single match
-      targetMatches = 1;
-
-      // Pick 1 random position to match
-      const matchPosition = Math.floor(Math.random() * 3);
-
-      winningNumbers = [
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10)
-      ];
-
-      // Set the matching position
-      winningNumbers[matchPosition] = playerGuesses[matchPosition];
-
-      // Make sure other positions DON'T match
-      for (let i = 0; i < 3; i++) {
-        if (i !== matchPosition) {
-          while (winningNumbers[i] === playerGuesses[i]) {
-            winningNumbers[i] = Math.floor(Math.random() * 10);
-          }
-        }
-      }
-
-      console.log('👍 Single match outcome generated');
-
-    } else {
-      // 40% chance - No match
-      targetMatches = 0;
-
-      winningNumbers = [
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10),
-        Math.floor(Math.random() * 10)
-      ];
-
-      // Make sure NONE match
-      for (let i = 0; i < 3; i++) {
-        while (winningNumbers[i] === playerGuesses[i]) {
-          winningNumbers[i] = Math.floor(Math.random() * 10);
-        }
-      }
-
-      console.log('😔 No match outcome generated');
+    if (settings.gamesEnabled?.luckyTriple === false) {
+      return res.status(403).json({ success: false, error: 'Lucky Triple is currently disabled' });
     }
 
-    // Calculate actual matches (verify our logic worked)
+    const playerGuesses = guesses.map((g) => parseInt(g));
+    const chances = settings.tripleWinChances || DIFFICULTY_PRESETS.medium.triple;
+    const { winningNumbers } = generateTripleOutcome(playerGuesses, chances);
+
     let matches = 0;
-    playerGuesses.forEach((guess, i) => {
-      if (guess === winningNumbers[i]) matches++;
-    });
+    playerGuesses.forEach((guess, i) => { if (guess === winningNumbers[i]) matches++; });
 
     // Calculate winnings
     let winAmount = 0;
@@ -806,7 +908,10 @@ app.post('/api/game/spin', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Insufficient balance' });
     }
 
-    // Determine chance of winning based on admin settings
+    if (settings.gamesEnabled?.spin === false) {
+      return res.status(403).json({ success: false, error: 'Spin the Bottle is currently disabled' });
+    }
+
     const winChance = settings.spinWinChances[`x${multiplier}`];
     const random = Math.random() * 100;
     const won = random <= winChance;
@@ -894,6 +999,172 @@ app.get('/api/game/spin-history', authenticateToken, async (req, res) => {
     res.json({ success: true, history });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to fetch spin history' });
+  }
+});
+
+// Play Lucky Slots
+app.post('/api/game/slots', authenticateToken, async (req, res) => {
+  try {
+    const { bet } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!bet || bet <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid bet amount' });
+    }
+
+    let settings = await GameSettings.findOne();
+    if (!settings) settings = await GameSettings.create({});
+
+    if (settings.gamesEnabled?.slots === false) {
+      return res.status(403).json({ success: false, error: 'Lucky Slots is currently disabled' });
+    }
+
+    if (bet < settings.minBet || bet > settings.maxBet) {
+      return res.status(400).json({ success: false, error: `Bet must be between GHS ${settings.minBet} and GHS ${settings.maxBet}` });
+    }
+
+    if (user.balance < bet) {
+      return res.status(400).json({ success: false, error: 'Insufficient balance' });
+    }
+
+    const chances = settings.slotsWinChances || DIFFICULTY_PRESETS.medium.slots;
+    const payouts = settings.slotsPayouts || { jackpot: 50, threeOfKind: 10, twoOfKind: 2 };
+    const roll = Math.random() * 100;
+
+    let winTier = 'none';
+    let multiplier = 0;
+    if (roll < (chances.jackpot || 3)) {
+      winTier = 'jackpot';
+      multiplier = payouts.jackpot || 50;
+    } else if (roll < (chances.jackpot || 3) + (chances.bigWin || 15)) {
+      winTier = 'bigWin';
+      multiplier = payouts.threeOfKind || 10;
+    } else if (roll < (chances.jackpot || 3) + (chances.bigWin || 15) + (chances.smallWin || 35)) {
+      winTier = 'smallWin';
+      multiplier = payouts.twoOfKind || 2;
+    }
+
+    const reels = generateSlotReels(winTier);
+    const won = winTier !== 'none';
+    const winAmount = won ? bet * multiplier : 0;
+    const profit = winAmount - bet;
+
+    const history = new SlotsGameHistory({
+      userId: user._id,
+      betAmount: bet,
+      reels,
+      winTier,
+      multiplier,
+      won,
+      profit
+    });
+
+    const newBalance = await processGamePayout(user, bet, profit, winAmount, history, 'Lucky Slots');
+
+    res.json({
+      success: true,
+      reels,
+      winTier,
+      multiplier,
+      won,
+      winAmount,
+      profit,
+      newBalance,
+      message: won ? `You won GHS ${winAmount.toFixed(2)}!` : 'No luck this spin!'
+    });
+  } catch (error) {
+    console.error('Slots game error:', error);
+    res.status(500).json({ success: false, error: 'Slots game error occurred' });
+  }
+});
+
+// Get Slots History
+app.get('/api/game/slots-history', authenticateToken, async (req, res) => {
+  try {
+    const history = await SlotsGameHistory.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(50);
+    res.json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch slots history' });
+  }
+});
+
+// Play Golden Roulette
+app.post('/api/game/roulette', authenticateToken, async (req, res) => {
+  try {
+    const { bet, betType, betNumber } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!bet || bet <= 0 || !['red', 'black', 'number'].includes(betType)) {
+      return res.status(400).json({ success: false, error: 'Invalid game parameters' });
+    }
+
+    if (betType === 'number' && (betNumber === undefined || betNumber < 0 || betNumber > 36)) {
+      return res.status(400).json({ success: false, error: 'Bet number must be between 0 and 36' });
+    }
+
+    let settings = await GameSettings.findOne();
+    if (!settings) settings = await GameSettings.create({});
+
+    if (settings.gamesEnabled?.roulette === false) {
+      return res.status(403).json({ success: false, error: 'Golden Roulette is currently disabled' });
+    }
+
+    if (bet < settings.minBet || bet > settings.maxBet) {
+      return res.status(400).json({ success: false, error: `Bet must be between GHS ${settings.minBet} and GHS ${settings.maxBet}` });
+    }
+
+    if (user.balance < bet) {
+      return res.status(400).json({ success: false, error: 'Insufficient balance' });
+    }
+
+    const chances = settings.rouletteWinChances || DIFFICULTY_PRESETS.medium.roulette;
+    const payouts = settings.roulettePayouts || { color: 2, number: 35 };
+    const winChance = betType === 'number' ? (chances.number || 3) : (chances.color || 48);
+    const won = Math.random() * 100 <= winChance;
+    const spinNumber = generateRouletteSpin(betType, parseInt(betNumber), won);
+    const spinColor = getRouletteColor(spinNumber);
+    const payoutMultiplier = betType === 'number' ? (payouts.number || 35) : (payouts.color || 2);
+    const winAmount = won ? bet * payoutMultiplier : 0;
+    const profit = winAmount - bet;
+
+    const history = new RouletteGameHistory({
+      userId: user._id,
+      betAmount: bet,
+      betType,
+      betNumber: betType === 'number' ? parseInt(betNumber) : undefined,
+      spinNumber,
+      spinColor,
+      won,
+      multiplier: payoutMultiplier,
+      profit
+    });
+
+    const newBalance = await processGamePayout(user, bet, profit, winAmount, history, 'Golden Roulette');
+
+    res.json({
+      success: true,
+      spinNumber,
+      spinColor,
+      won,
+      multiplier: payoutMultiplier,
+      winAmount,
+      profit,
+      newBalance,
+      message: won ? `Number ${spinNumber} ${spinColor}! You won GHS ${winAmount.toFixed(2)}!` : `Number ${spinNumber} ${spinColor}. Better luck next time!`
+    });
+  } catch (error) {
+    console.error('Roulette game error:', error);
+    res.status(500).json({ success: false, error: 'Roulette game error occurred' });
+  }
+});
+
+// Get Roulette History
+app.get('/api/game/roulette-history', authenticateToken, async (req, res) => {
+  try {
+    const history = await RouletteGameHistory.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(50);
+    res.json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch roulette history' });
   }
 });
 
@@ -1220,27 +1491,43 @@ app.post('/api/admin/reject-withdrawal', authenticateToken, requireAdmin, async 
 // Update Game Settings
 app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { houseFee, maxBet, minBet, payoutMultipliers } = req.body;
+    const {
+      houseFee, maxBet, minBet, difficulty, gamesEnabled,
+      payoutMultipliers, tripleWinChances, spinWinChances,
+      slotsWinChances, slotsPayouts, rouletteWinChances, roulettePayouts,
+      applyDifficultyPreset
+    } = req.body;
 
     let settings = await GameSettings.findOne();
-    if (!settings) {
-      settings = new GameSettings();
-    }
+    if (!settings) settings = new GameSettings();
 
     if (houseFee !== undefined) settings.houseFee = houseFee;
     if (maxBet !== undefined) settings.maxBet = maxBet;
     if (minBet !== undefined) settings.minBet = minBet;
-    if (payoutMultipliers) settings.payoutMultipliers = payoutMultipliers;
+    if (difficulty !== undefined) settings.difficulty = difficulty;
+    if (gamesEnabled) settings.gamesEnabled = { ...settings.gamesEnabled?.toObject?.() || settings.gamesEnabled || {}, ...gamesEnabled };
+    if (payoutMultipliers) settings.payoutMultipliers = { ...settings.payoutMultipliers?.toObject?.() || settings.payoutMultipliers || {}, ...payoutMultipliers };
+    if (tripleWinChances) settings.tripleWinChances = { ...settings.tripleWinChances?.toObject?.() || settings.tripleWinChances || {}, ...tripleWinChances };
+    if (spinWinChances) settings.spinWinChances = { ...settings.spinWinChances?.toObject?.() || settings.spinWinChances || {}, ...spinWinChances };
+    if (slotsWinChances) settings.slotsWinChances = { ...settings.slotsWinChances?.toObject?.() || settings.slotsWinChances || {}, ...slotsWinChances };
+    if (slotsPayouts) settings.slotsPayouts = { ...settings.slotsPayouts?.toObject?.() || settings.slotsPayouts || {}, ...slotsPayouts };
+    if (rouletteWinChances) settings.rouletteWinChances = { ...settings.rouletteWinChances?.toObject?.() || settings.rouletteWinChances || {}, ...rouletteWinChances };
+    if (roulettePayouts) settings.roulettePayouts = { ...settings.roulettePayouts?.toObject?.() || settings.roulettePayouts || {}, ...roulettePayouts };
+
+    if (applyDifficultyPreset && DIFFICULTY_PRESETS[applyDifficultyPreset]) {
+      const preset = DIFFICULTY_PRESETS[applyDifficultyPreset];
+      settings.difficulty = applyDifficultyPreset;
+      settings.tripleWinChances = preset.triple;
+      settings.spinWinChances = preset.spin;
+      settings.slotsWinChances = preset.slots;
+      settings.rouletteWinChances = preset.roulette;
+    }
 
     settings.updatedAt = new Date();
     settings.updatedBy = req.user.id;
     await settings.save();
 
-    res.json({
-      success: true,
-      message: 'Game settings updated successfully',
-      settings
-    });
+    res.json({ success: true, message: 'Game settings updated successfully', settings });
   } catch (error) {
     console.error('Update settings error:', error);
     res.status(500).json({ success: false, error: 'Failed to update settings' });
@@ -1407,6 +1694,32 @@ app.get('/api/admin/spin-history', authenticateToken, requireAdmin, async (req, 
     res.json({ success: true, history });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to fetch admin spin history' });
+  }
+});
+
+// Admin Get All Slots History
+app.get('/api/admin/slots-history', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const history = await SlotsGameHistory.find()
+      .populate('userId', 'email phone')
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch admin slots history' });
+  }
+});
+
+// Admin Get All Roulette History
+app.get('/api/admin/roulette-history', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const history = await RouletteGameHistory.find()
+      .populate('userId', 'email phone')
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch admin roulette history' });
   }
 });
 

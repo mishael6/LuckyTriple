@@ -3,6 +3,7 @@ import { API } from '../../api-helper';
 import { ReferrerManagement } from './referral/ReferrerManagement';
 import { ReferrerWithdrawals } from './referral/ReferrerWithdrawals';
 import { ReferralStats } from './referral/ReferralStats';
+import { AdminGameSettings } from './AdminGameSettings';
 
 // ============================================================================
 // ADMIN DASHBOARD
@@ -16,6 +17,8 @@ export const AdminDashboard = ({ user, onLogout }) => {
   const [stats, setStats] = useState(null);
   const [smsLogs, setSmsLogs] = useState([]);
   const [spinHistory, setSpinHistory] = useState([]);
+  const [slotsHistory, setSlotsHistory] = useState([]);
+  const [rouletteHistory, setRouletteHistory] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // SMS State
@@ -52,6 +55,12 @@ export const AdminDashboard = ({ user, onLogout }) => {
       } else if (view === 'spin-history') {
         const response = await API.getAdminSpinHistory();
         if (response.success) setSpinHistory(response.history);
+      } else if (view === 'slots-history') {
+        const response = await API.getAdminSlotsHistory();
+        if (response.success) setSlotsHistory(response.history);
+      } else if (view === 'roulette-history') {
+        const response = await API.getAdminRouletteHistory();
+        if (response.success) setRouletteHistory(response.history);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -207,13 +216,25 @@ export const AdminDashboard = ({ user, onLogout }) => {
             className={view === 'spin-history' ? 'active' : ''}
             onClick={() => setView('spin-history')}
           >
-            🍾 Spin History
+            🍾 Spin
+          </button>
+          <button
+            className={view === 'slots-history' ? 'active' : ''}
+            onClick={() => setView('slots-history')}
+          >
+            🎰 Slots
+          </button>
+          <button
+            className={view === 'roulette-history' ? 'active' : ''}
+            onClick={() => setView('roulette-history')}
+          >
+            🎡 Roulette
           </button>
           <button
             className={view === 'settings' ? 'active' : ''}
             onClick={() => setView('settings')}
           >
-            ⚙️ Settings
+            ⚙️ Game Control
           </button>
           <button onClick={() => setView('referral-stats')}>📊 Referral Stats</button>
           <button onClick={() => setView('referrers')}>👥 Referrers</button>
@@ -494,108 +515,91 @@ export const AdminDashboard = ({ user, onLogout }) => {
           </div>
         )}
 
+        {view === 'slots-history' && (
+          <div className="admin-section">
+            <h3>🎰 Lucky Slots History</h3>
+            <div className="withdrawals-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Bet</th>
+                    <th>Reels</th>
+                    <th>Tier</th>
+                    <th>Multiplier</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slotsHistory.map((h) => (
+                    <tr key={h._id}>
+                      <td>{h.userId?.email || 'Unknown'}</td>
+                      <td>GHS {h.betAmount.toFixed(2)}</td>
+                      <td>{(h.reels || []).join(' ')}</td>
+                      <td>{h.winTier}</td>
+                      <td>{h.multiplier}x</td>
+                      <td>
+                        <span className={`status-badge ${h.won ? 'completed' : 'rejected'}`}>
+                          {h.won ? `+GHS ${h.profit.toFixed(2)}` : `-GHS ${Math.abs(h.profit).toFixed(2)}`}
+                        </span>
+                      </td>
+                      <td>{new Date(h.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {view === 'roulette-history' && (
+          <div className="admin-section">
+            <h3>🎡 Golden Roulette History</h3>
+            <div className="withdrawals-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Bet</th>
+                    <th>Bet Type</th>
+                    <th>Number Bet</th>
+                    <th>Spin Result</th>
+                    <th>Result</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rouletteHistory.map((h) => (
+                    <tr key={h._id}>
+                      <td>{h.userId?.email || 'Unknown'}</td>
+                      <td>GHS {h.betAmount.toFixed(2)}</td>
+                      <td>{h.betType}</td>
+                      <td>{h.betNumber ?? '—'}</td>
+                      <td>{h.spinNumber} ({h.spinColor})</td>
+                      <td>
+                        <span className={`status-badge ${h.won ? 'completed' : 'rejected'}`}>
+                          {h.won ? `+GHS ${h.profit.toFixed(2)}` : `-GHS ${Math.abs(h.profit).toFixed(2)}`}
+                        </span>
+                      </td>
+                      <td>{new Date(h.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {view === 'settings' && gameSettings && (
           <div className="admin-section">
-            <h3>Game Settings</h3>
-            <div className="settings-form">
-              <div className="setting-item">
-                <label>House Fee (%)</label>
-                <input
-                  type="number"
-                  value={gameSettings.houseFee}
-                  onChange={(e) => setGameSettings({ ...gameSettings, houseFee: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="setting-item">
-                <label>Maximum Bet (GHS)</label>
-                <input
-                  type="number"
-                  value={gameSettings.maxBet}
-                  onChange={(e) => setGameSettings({ ...gameSettings, maxBet: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="setting-item">
-                <label>Minimum Bet (GHS)</label>
-                <input
-                  type="number"
-                  value={gameSettings.minBet}
-                  onChange={(e) => setGameSettings({ ...gameSettings, minBet: parseInt(e.target.value) })}
-                />
-              </div>
-              <h4>Payout Multipliers</h4>
-              <div className="setting-item">
-                <label>3 Matches Multiplier</label>
-                <input
-                  type="number"
-                  value={gameSettings.payoutMultipliers.threeMatches}
-                  onChange={(e) => setGameSettings({
-                    ...gameSettings,
-                    payoutMultipliers: { ...gameSettings.payoutMultipliers, threeMatches: parseInt(e.target.value) }
-                  })}
-                />
-              </div>
-              <div className="setting-item">
-                <label>2 Matches Multiplier</label>
-                <input
-                  type="number"
-                  value={gameSettings.payoutMultipliers.twoMatches}
-                  onChange={(e) => setGameSettings({
-                    ...gameSettings,
-                    payoutMultipliers: { ...gameSettings.payoutMultipliers, twoMatches: parseInt(e.target.value) }
-                  })}
-                />
-              </div>
-              <div className="setting-item">
-                <label>1 Match Multiplier</label>
-                <input
-                  type="number"
-                  value={gameSettings.payoutMultipliers.oneMatch}
-                  onChange={(e) => setGameSettings({
-                    ...gameSettings,
-                    payoutMultipliers: { ...gameSettings.payoutMultipliers, oneMatch: parseInt(e.target.value) }
-                  })}
-                />
-              </div>
-
-              <h4>Spin the Bottle Win Chances</h4>
-              <div className="setting-item">
-                <label>x2 Multiplier Win %</label>
-                <input
-                  type="number"
-                  value={gameSettings.spinWinChances?.x2 || 45}
-                  onChange={(e) => setGameSettings({
-                    ...gameSettings,
-                    spinWinChances: { ...gameSettings.spinWinChances, x2: parseInt(e.target.value) }
-                  })}
-                />
-              </div>
-              <div className="setting-item">
-                <label>x3 Multiplier Win %</label>
-                <input
-                  type="number"
-                  value={gameSettings.spinWinChances?.x3 || 30}
-                  onChange={(e) => setGameSettings({
-                    ...gameSettings,
-                    spinWinChances: { ...gameSettings.spinWinChances, x3: parseInt(e.target.value) }
-                  })}
-                />
-              </div>
-              <div className="setting-item">
-                <label>x4 Multiplier Win %</label>
-                <input
-                  type="number"
-                  value={gameSettings.spinWinChances?.x4 || 20}
-                  onChange={(e) => setGameSettings({
-                    ...gameSettings,
-                    spinWinChances: { ...gameSettings.spinWinChances, x4: parseInt(e.target.value) }
-                  })}
-                />
-              </div>
-
-              <button className="save-settings-btn" onClick={handleUpdateSettings}>
-                Save Settings
-              </button>
-            </div>
+            <h3>🎛️ Game Control Center</h3>
+            <p className="admin-section-desc">Control difficulty, win rates, payouts, and enable/disable every game.</p>
+            <AdminGameSettings
+              gameSettings={gameSettings}
+              setGameSettings={setGameSettings}
+              onSave={handleUpdateSettings}
+            />
           </div>
         )}
         {view === 'referral-stats' && <ReferralStats />}

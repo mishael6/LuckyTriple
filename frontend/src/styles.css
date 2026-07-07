@@ -327,6 +327,46 @@ body {
   color: #ffd700;
 }
 
+.balance-display--win {
+  animation: balanceWin 1.2s ease;
+  border-color: rgba(0, 255, 136, 0.6) !important;
+  background: rgba(0, 255, 136, 0.15) !important;
+}
+
+.balance-display--win .balance-amount {
+  color: #00ff88;
+}
+
+.balance-display--lose {
+  animation: balanceLose 1.2s ease;
+  border-color: rgba(255, 107, 107, 0.6) !important;
+  background: rgba(255, 107, 107, 0.12) !important;
+}
+
+.balance-display--lose .balance-amount {
+  color: #ff6b6b;
+}
+
+@keyframes balanceWin {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+@keyframes balanceLose {
+  0%, 100% { transform: scale(1); }
+  25%, 75% { transform: scale(0.97); }
+}
+
+.new-balance-display {
+  margin-top: 10px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.new-balance-display strong {
+  color: #ffd700;
+}
+
 .logout-btn {
   padding: 10px 20px;
   background: rgba(255, 255, 255, 0.05);
@@ -2794,4 +2834,374 @@ textarea {
   .nav-right .balance-display {
     display: none;
   }
+}
+
+/* ============================================================================
+   FUN LOBBY STICKERS & GAME CARDS
+   ============================================================================ */
+
+.casino-lobby--fun {
+  position: relative;
+  overflow: visible;
+}
+
+.lobby-stickers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.lobby-sticker {
+  position: absolute;
+  font-size: 28px;
+  opacity: 0.35;
+  filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.3));
+}
+
+.casino-lobby__jackpot-banner {
+  display: inline-block;
+  padding: 10px 24px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 68, 68, 0.15) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  border-radius: 100px;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: #ffd700;
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.25);
+}
+
+.game-card--fun .game-card__emoji {
+  font-size: 48px;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.game-card__sticker {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ff4466, #ff8800);
+  color: #fff;
+  letter-spacing: 0.5px;
+  z-index: 2;
+}
+
+.game-card--fun .game-card__icon {
+  font-size: 28px;
+  letter-spacing: 4px;
+}
+
+/* ============================================================================
+   SLOTS GAME
+   ============================================================================ */
+
+.slots-machine {
+  position: relative;
+  background: linear-gradient(180deg, #1a0a2e 0%, #2d1b4e 100%);
+  border: 3px solid rgba(255, 215, 0, 0.4);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(255, 215, 0, 0.15);
+}
+
+.slots-machine__lights {
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 16px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.slots-reels {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.slots-reel {
+  width: 90px;
+  height: 100px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.slots-reel__symbol {
+  font-size: 48px;
+}
+
+.slots-reel--spinning {
+  border-color: #ffd700;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
+}
+
+.slots-machine__handle {
+  text-align: center;
+  font-size: 32px;
+  margin-top: 16px;
+}
+
+.slots-payouts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.slots-payouts span {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 100px;
+}
+
+.slots-odds {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 8px;
+}
+
+.slots-spin-btn {
+  font-size: 18px !important;
+}
+
+/* ============================================================================
+   ROULETTE GAME
+   ============================================================================ */
+
+.roulette-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  margin-bottom: 24px;
+}
+
+.roulette-wheel {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: conic-gradient(#c0392b 0deg 180deg, #1a1a2e 180deg 360deg);
+  border: 4px solid #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.2);
+  position: relative;
+}
+
+.roulette-wheel__inner {
+  font-size: 48px;
+  z-index: 1;
+}
+
+.roulette-wheel__ring {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 215, 0, 0.4);
+}
+
+.roulette-ball {
+  position: absolute;
+  top: 20px;
+  font-size: 20px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.roulette-result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+.roulette-result.win {
+  background: rgba(0, 255, 136, 0.12);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: #00ff88;
+}
+
+.roulette-result.lose {
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+}
+
+.roulette-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.roulette-number--red { background: #c0392b; }
+.roulette-number--black { background: #1a1a2e; border: 2px solid #555; }
+.roulette-number--green { background: #27ae60; }
+
+.roulette-bets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.roulette-bet-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.roulette-bet-btn.active {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+}
+
+.roulette-bet-btn--red.active { border-color: #c0392b; background: rgba(192, 57, 43, 0.2); color: #ff6b6b; }
+.roulette-bet-btn--black.active { border-color: #555; background: rgba(0, 0, 0, 0.4); color: #fff; }
+
+.roulette-number-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.roulette-number-picker input {
+  width: 80px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #fff;
+  text-align: center;
+}
+
+.roulette-preview {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+/* ============================================================================
+   ADMIN GAME CONTROL
+   ============================================================================ */
+
+.admin-section-desc {
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.settings-form--games {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.settings-section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.settings-section h4 {
+  margin-bottom: 16px;
+  color: #ffd700;
+  font-size: 16px;
+}
+
+.settings-section h5 {
+  margin: 12px 0 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.game-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.game-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+}
+
+.game-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #ffd700;
+}
+
+.difficulty-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.preset-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  background: rgba(255, 215, 0, 0.1);
+  color: #ffd700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+}
+
+.settings-form--games .save-settings-btn {
+  grid-column: 1 / -1;
 }

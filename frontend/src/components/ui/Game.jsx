@@ -77,9 +77,14 @@ export const GameView = ({
               {result.profit > 0 ? (
                 <span className="win-amount">+GHS {result.profit.toFixed(2)}</span>
               ) : (
-                <span className="lose-amount">-GHS {bet.toFixed(2)}</span>
+                <span className="lose-amount">-GHS {Math.abs(result.profit).toFixed(2)}</span>
               )}
             </div>
+            {result.newBalance !== undefined && (
+              <div className="new-balance-display">
+                New Balance: <strong>GHS {Number(result.newBalance).toFixed(2)}</strong>
+              </div>
+            )}
           </motion.div>
         )}
 

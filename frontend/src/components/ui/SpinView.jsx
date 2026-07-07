@@ -42,7 +42,7 @@ export const SpinView = ({
             if (gameResult.success) {
                 setSpinResult(gameResult);
                 if (onUpdateUser) {
-                    onUpdateUser({ balance: gameResult.newBalance });
+                    onUpdateUser({ balance: gameResult.newBalance, profit: gameResult.profit });
                 }
             }
         } catch (error) {
@@ -100,6 +100,9 @@ export const SpinView = ({
                                 ? `🎉 WINNER! The bottle pointed ${spinResult.outcome.toUpperCase()}! (+GHS ${spinResult.profit.toFixed(2)})`
                                 : `😔 LOST! The bottle pointed ${spinResult.outcome.toUpperCase()}! (-GHS ${Math.abs(spinResult.profit).toFixed(2)})`
                             }
+                            {spinResult.newBalance !== undefined && (
+                              <div className="new-balance-display">Balance: GHS {Number(spinResult.newBalance).toFixed(2)}</div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>
