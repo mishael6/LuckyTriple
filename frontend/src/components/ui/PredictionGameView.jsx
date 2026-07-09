@@ -83,7 +83,7 @@ export const PredictionGameView = ({
     }
 
     setPlaying(true);
-    setSpinning(true);
+    setSpinning(visual !== 'wheel');
     setResult(null);
     setRouletteIdle(false);
 
@@ -123,6 +123,7 @@ export const PredictionGameView = ({
 
       if (gameResult.success) {
         setResult(gameResult);
+        if (visual === 'wheel') setSpinning(true);
         await new Promise((r) => setTimeout(r, ANIM_DURATION_MS[visual] || 2000));
         if (onUpdateUser) {
           onUpdateUser({ balance: gameResult.newBalance, profit: gameResult.profit });

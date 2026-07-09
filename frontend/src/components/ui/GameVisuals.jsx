@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 const DICE_DOTS = {
   1: [[50, 50]],
   2: [[28, 28], [72, 72]],
@@ -38,17 +40,54 @@ export const BottleVisual = ({ spinning, outcome }) => {
   );
 };
 
+const WHEEL_FULL_ROTATION = 6 * 360;
+// Align the center of each half (not the seam) with the top pointer
+const ROULETTE_LAND_OFFSET = { red: 270, black: 90 };
+
 export const RouletteWheelVisual = ({ spinning, outcome, idleSpin = false }) => {
-  const landDeg = outcome === 'black' ? 180 : 0;
-  const landedStyle = !spinning && outcome
-    ? { transform: `rotate(${2160 + landDeg}deg)` }
+  const [rotation, setRotation] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (spinning && outcome) {
+      setIsAnimating(false);
+      setRotation(0);
+      const frame = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+          setRotation(WHEEL_FULL_ROTATION + ROULETTE_LAND_OFFSET[outcome]);
+        });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (!spinning && outcome) {
+      setIsAnimating(false);
+      setRotation(WHEEL_FULL_ROTATION + ROULETTE_LAND_OFFSET[outcome]);
+      return;
+    }
+
+    if (!spinning && !outcome) {
+      setIsAnimating(false);
+      setRotation(0);
+    }
+  }, [spinning, outcome]);
+
+  const useJsRotation = Boolean(outcome);
+  const showIdleAnimation = idleSpin && !spinning && !outcome;
+  const wheelStyle = useJsRotation
+    ? {
+        transform: `rotate(${rotation}deg)`,
+        transition: isAnimating ? 'transform 2.8s cubic-bezier(0.12, 0.8, 0.2, 1)' : 'none',
+        animation: 'none',
+      }
     : undefined;
 
   return (
-    <div className={`game-visual roulette-visual ${idleSpin && !spinning && !outcome ? 'roulette-visual--idle' : ''} ${spinning ? 'roulette-visual--spinning' : ''} ${outcome && !spinning ? 'roulette-visual--landed' : ''}`}>
+    <div className={`game-visual roulette-visual ${showIdleAnimation ? 'roulette-visual--idle' : ''} ${spinning ? 'roulette-visual--spinning' : ''} ${outcome && !spinning ? 'roulette-visual--landed' : ''}`}>
       <div className="roulette-visual__pointer" />
       <div className="roulette-visual__wheel-wrap">
-        <div className="roulette-visual__wheel" style={landedStyle}>
+        <div className="roulette-visual__wheel" style={wheelStyle}>
           <div className="roulette-visual__label roulette-visual__label--red">RED</div>
           <div className="roulette-visual__label roulette-visual__label--black">BLACK</div>
           <div className="roulette-visual__hub">🎡</div>

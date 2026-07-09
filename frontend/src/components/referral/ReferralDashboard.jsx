@@ -184,28 +184,30 @@ export const ReferralDashboard = ({ referrer, onLogout }) => {
             <motion.div key="users" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h3>Referred Users ({users.length})</h3>
               {loading ? <p>Loading...</p> : users.length === 0 ? <p>No users yet.</p> : (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Email</th>
-                      <th>Joined</th>
-                      <th>Wins</th>
-                      <th>Win Amount</th>
-                      <th>Commission</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(user => (
-                      <tr key={user._id}>
-                        <td>{user.email}</td>
-                        <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                        <td>{user.totalWins}</td>
-                        <td>GHS {user.totalWinAmount?.toFixed(2) || '0.00'}</td>
-                        <td>GHS {user.commissionEarned?.toFixed(2) || '0.00'}</td>
+                <div className="referral-table-wrap">
+                  <table className="referral-table">
+                    <thead>
+                      <tr>
+                        <th>Email</th>
+                        <th>Joined</th>
+                        <th>Wins</th>
+                        <th>Win Amount</th>
+                        <th>Commission</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {users.map(user => (
+                        <tr key={user._id}>
+                          <td className="referral-table__email">{user.email}</td>
+                          <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                          <td>{user.totalWins}</td>
+                          <td>GHS {user.totalWinAmount?.toFixed(2) || '0.00'}</td>
+                          <td>GHS {user.commissionEarned?.toFixed(2) || '0.00'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </motion.div>
           )}
@@ -214,24 +216,26 @@ export const ReferralDashboard = ({ referrer, onLogout }) => {
             <motion.div key="withdrawals" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h3>Withdrawal History</h3>
               {loading ? <p>Loading...</p> : withdrawals.length === 0 ? <p>No withdrawals yet.</p> : (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Amount</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {withdrawals.map(w => (
-                      <tr key={w._id}>
-                        <td>{new Date(w.createdAt).toLocaleString()}</td>
-                        <td>GHS {w.amount.toFixed(2)}</td>
-                        <td><span className={`status-badge status-${w.status}`}>{w.status}</span></td>
+                <div className="referral-table-wrap">
+                  <table className="referral-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {withdrawals.map(w => (
+                        <tr key={w._id}>
+                          <td>{new Date(w.createdAt).toLocaleString()}</td>
+                          <td>GHS {w.amount.toFixed(2)}</td>
+                          <td><span className={`status-badge status-${w.status}`}>{w.status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </motion.div>
           )}
