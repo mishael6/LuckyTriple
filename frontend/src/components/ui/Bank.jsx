@@ -10,7 +10,7 @@ const NETWORKS = [
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const BankView = ({ user, onUpdateUser }) => {
+export const BankView = ({ user, onUpdateUser, gameSettings }) => {
   const [action, setAction] = useState('deposit');
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -21,6 +21,9 @@ export const BankView = ({ user, onUpdateUser }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('error');
+
+  const minDeposit = gameSettings?.minDeposit ?? 1;
+  const maxDeposit = gameSettings?.maxDeposit ?? 5000;
 
   const showMessage = (text, type = 'error') => {
     setMessage(text);
@@ -61,6 +64,11 @@ export const BankView = ({ user, onUpdateUser }) => {
     const depositAmount = parseFloat(amount);
     if (!depositAmount || depositAmount <= 0) {
       showMessage('Please enter a valid amount');
+      return;
+    }
+
+    if (depositAmount < minDeposit || depositAmount > maxDeposit) {
+      showMessage(`Deposit must be between GHS ${minDeposit} and GHS ${maxDeposit}`);
       return;
     }
 
@@ -309,9 +317,15 @@ export const BankView = ({ user, onUpdateUser }) => {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  min="1"
+                  min={action === 'deposit' ? minDeposit : 1}
+                  max={action === 'deposit' ? maxDeposit : undefined}
                   step="0.01"
                 />
+                {action === 'deposit' && (
+                  <p className="bank-amount-hint">
+                    Allowed deposit: GHS {minDeposit} – GHS {maxDeposit}
+                  </p>
+                )}
               </div>
 
               <div className="input-group">

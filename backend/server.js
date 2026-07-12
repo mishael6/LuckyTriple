@@ -389,6 +389,8 @@ const gameSettingsSchema = new mongoose.Schema({
   houseFee: { type: Number, default: 10 },
   maxBet: { type: Number, default: 1000 },
   minBet: { type: Number, default: 1 },
+  minDeposit: { type: Number, default: 1 },
+  maxDeposit: { type: Number, default: 5000 },
   difficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
   gamesEnabled: {
     luckyTriple: { type: Boolean, default: true },
@@ -1756,7 +1758,7 @@ app.post('/api/admin/reject-withdrawal', authenticateToken, requireAdmin, async 
 app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const {
-      houseFee, maxBet, minBet, difficulty, gamesEnabled,
+      houseFee, maxBet, minBet, minDeposit, maxDeposit, difficulty, gamesEnabled,
       payoutMultipliers, tripleWinChances, spinWinChances,
       slotsWinChances, slotsMultiplierWinChances, slotsPayouts, rouletteWinChances, coinWinChances, diceWinChances,
       applyDifficultyPreset
@@ -1768,6 +1770,8 @@ app.put('/api/admin/game-settings', authenticateToken, requireAdmin, async (req,
     if (houseFee !== undefined) settings.houseFee = houseFee;
     if (maxBet !== undefined) settings.maxBet = maxBet;
     if (minBet !== undefined) settings.minBet = minBet;
+    if (minDeposit !== undefined) settings.minDeposit = minDeposit;
+    if (maxDeposit !== undefined) settings.maxDeposit = maxDeposit;
     if (difficulty !== undefined) settings.difficulty = difficulty;
     if (gamesEnabled) settings.gamesEnabled = { ...settings.gamesEnabled?.toObject?.() || settings.gamesEnabled || {}, ...gamesEnabled };
     if (payoutMultipliers) settings.payoutMultipliers = { ...settings.payoutMultipliers?.toObject?.() || settings.payoutMultipliers || {}, ...payoutMultipliers };
@@ -2817,6 +2821,19 @@ app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid amount' });
     }
 
+    let settings = await GameSettings.findOne();
+    if (!settings) settings = await GameSettings.create({});
+    const minDeposit = settings.minDeposit ?? 1;
+    const maxDeposit = settings.maxDeposit ?? 5000;
+    const depositAmount = Number(amount);
+
+    if (depositAmount < minDeposit || depositAmount > maxDeposit) {
+      return res.status(400).json({
+        success: false,
+        error: `Deposit must be between GHS ${minDeposit} and GHS ${maxDeposit}`,
+      });
+    }
+
     if (!formattedPhone || !payloqaPhone) {
       return res.status(400).json({
         success: false,
@@ -2833,7 +2850,7 @@ app.post('/api/payments/initiate', authenticateToken, async (req, res) => {
 
     const redirectUrl = process.env.FRONTEND_URL || 'https://luckytriplegame.com';
     const result = await payloqaPaymentsAPI.createPayment({
-      amount: Number(amount),
+      amount: depositAmount,
       currency: 'GHS',
       payment_method: 'mobile_money',
       phone_number: payloqaPhone,

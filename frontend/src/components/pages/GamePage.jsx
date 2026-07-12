@@ -284,7 +284,7 @@ export const GamePage = ({ user, onLogout, onUpdateUser }) => {
           )}
 
           {view === 'bank' && (
-            <BankView key="bank" user={user} onUpdateUser={onUpdateUser} />
+            <BankView key="bank" user={user} onUpdateUser={onUpdateUser} gameSettings={gameSettings} />
           )}
         </AnimatePresence>
       </main>

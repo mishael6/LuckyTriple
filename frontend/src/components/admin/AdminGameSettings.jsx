@@ -56,8 +56,13 @@ export const AdminGameSettings = ({ gameSettings, setGameSettings, onSave }) => 
       <section className="settings-section">
         <h4>🎛️ Global Controls</h4>
         <SettingInput label="House Fee (%)" value={s.houseFee} onChange={(v) => setGameSettings({ ...s, houseFee: v })} />
-        <SettingInput label="Minimum Bet (GHS)" value={s.minBet} onChange={(v) => setGameSettings({ ...s, minBet: v })} />
-        <SettingInput label="Maximum Bet (GHS)" value={s.maxBet} onChange={(v) => setGameSettings({ ...s, maxBet: v })} />
+        <h5>Play Amount Limits</h5>
+        <SettingInput label="Minimum Play Amount (GHS)" value={s.minBet} onChange={(v) => setGameSettings({ ...s, minBet: v })} />
+        <SettingInput label="Maximum Play Amount (GHS)" value={s.maxBet} onChange={(v) => setGameSettings({ ...s, maxBet: v })} />
+        <h5>Deposit Amount Limits</h5>
+        <SettingInput label="Minimum Deposit (GHS)" value={s.minDeposit ?? 1} onChange={(v) => setGameSettings({ ...s, minDeposit: v })} />
+        <SettingInput label="Maximum Deposit (GHS)" value={s.maxDeposit ?? 5000} onChange={(v) => setGameSettings({ ...s, maxDeposit: v })} />
+        <p className="settings-hint">Play limits apply to all games. Deposit limits apply when users top up their wallet.</p>
         <div className="setting-item">
           <label>Difficulty Preset</label>
           <select value={s.difficulty || 'medium'} onChange={(e) => setGameSettings({ ...s, difficulty: e.target.value })}>
