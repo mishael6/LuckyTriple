@@ -4,6 +4,13 @@ to = "https://luckytriple-production.up.railway.app"
 status = 200
 force = true
 
+# Keep ads.txt as a real file (do not rewrite to SPA)
+[[redirects]]
+from = "/ads.txt"
+to = "/ads.txt"
+status = 200
+force = true
+
 # SPA fallback for referrer portal routes
 [[redirects]]
 from = "/referral/*"
@@ -24,3 +31,9 @@ status = 200
 from = "/signup/*"
 to = "/index.html"
 status = 200
+
+[[headers]]
+for = "/ads.txt"
+  [headers.values]
+  Content-Type = "text/plain; charset=utf-8"
+  Cache-Control = "public, max-age=86400"
